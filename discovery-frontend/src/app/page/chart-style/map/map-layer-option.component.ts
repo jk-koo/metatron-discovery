@@ -268,12 +268,16 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
      });
      */
      let fieldList = _.filter(this.pivot.columns, (dimension) => {
-       return !(_.eq(dimension.field.logicalType, "GEO_POINT") || _.eq(dimension.field.logicalType, "GEO_LINE") || _.eq(dimension.field.logicalType, "GEO_POLYGON"))
+       return !(_.eq(dimension.field.logicalType, "GEO_POINT") || _.eq(dimension.field.logicalType, "GEO_LINE") || _.eq(dimension.field.logicalType, "GEO_POLYGON"));
      });
 
      this.fieldList = _.map(fieldList, (field) => {
        return field.name;
      });
+
+     if ( this.fieldList.length>0 && this.fieldList.indexOf(uiOption.layers[0].color.column)===-1 ) {
+       uiOption.layers[0].color.column = this.fieldList[0];
+     }
    }
 
    /**
@@ -404,7 +408,7 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
        // init column
        if (this.uiOption.layers[0]) {
          if (!this.uiOption.layers[0].color) this.uiOption.layers[0].color = {};
-         this.uiOption.layers[0].color['column'] = "NONE";
+         // this.uiOption.layers[0].color['column'] = "NONE";
        }
      } else if(colorType === 'MEASURE') {
        this.color['schema'] = 'VC1';
@@ -412,7 +416,7 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
        // init column
        if (this.uiOption.layers[0]) {
          if (!this.uiOption.layers[0].color) this.uiOption.layers[0].color = {};
-         this.uiOption.layers[0].color['column'] = "NONE";
+         // this.uiOption.layers[0].color['column'] = "NONE";
        }
      }
 

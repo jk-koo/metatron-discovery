@@ -458,26 +458,19 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
         }
 
       } else if(featureColorType === 'DIMENSION') {
-        let colorList = ChartColorList[featureColor];
-        featureColor = colorList[(parseInt(feature.getId().substring(26)) % colorList.length) - 1];
-
-        if(styleOption.layers[layerNum].color['ranges']) {
-          for(let range of styleOption.layers[layerNum].color['ranges']) {
-            if(range["column"] === feature.getProperties()[styleOption.layers[layerNum].color.column] || range["column"] === "undefined") {
-              featureColor = range["color"];
-            }
-          }
-        } else {
-          const ranges = setDimensionColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
-          for(let range of ranges) {
-            if(range["column"] === feature.getProperties()[styleOption.layers[layerNum].color.column]) {
-              featureColor = range["color"];
-            }
+        const ranges = setDimensionColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
+        for(let range of ranges) {
+          if(range["column"] === feature.getProperties()[styleOption.layers[layerNum].color.column]) {
+            featureColor = range["color"];
           }
         }
-
       } else if(featureColorType === 'NONE') {
-        featureColor = styleOption.layers[layerNum].color.schema;
+        if ( styleOption.layers[layerNum].color.schema.indexOf('#')!=-1 ) {
+          featureColor = styleOption.layers[layerNum].color.schema;
+        } else {
+          styleOption.layers[layerNum].color.schema = '#602663';
+          featureColor = '#602663';
+        }
       }
 
       // color code hex -> rgba transparency 적용
@@ -1584,22 +1577,10 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
                   '<span class="ddp-data">'+ this.uiOption.layers[i].type +'</span>' +
                   '<ul class="ddp-list-remark">';
 
-              if(this.uiOption.layers[i].color["ranges"]) {
-                for(let range of this.uiOption.layers[i].color["ranges"]) {
-                  legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + range["color"] + '"></em>' + range["column"] + '</li>';
-                }
-              } else {
-                if(this.uiOption.layers[i].color["column"] !== 'NONE') {
-                  const ranges = this.setDimensionColorRange(this.uiOption, this.mapData[i], ChartColorList[this.uiOption.layers[i].color['schema']], i, []);
+              const ranges = this.setDimensionColorRange(this.uiOption, this.mapData[i], ChartColorList[this.uiOption.layers[i].color['schema']], i, []);
 
-                  for(let range of ranges) {
-                    legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + range["color"] + '"></em>' + range["column"] + '</li>';
-                  }
-                } else {
-                  for(let field of this.uiOption.fieldList) {
-                    legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:#602663"></em>' + field + '</li>';
-                  }
-                }
+              for(let range of ranges) {
+                legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + range["color"] + '"></em>' + range["column"] + '</li>';
               }
 
               legendHtml = legendHtml + '</ul></div>';
@@ -1699,12 +1680,24 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
                   '<span class="ddp-data">' + this.uiOption.layers[i].type + ' Color</span>' +
                   '<ul class="ddp-list-remark">';
 
-              if (this.uiOption.fielDimensionList.length === 1) {
-                legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + this.uiOption.layers[i].color["schema"] + '"></em>' + this.uiOption.fielDimensionList[0]["alias"] + '</li>';
-              } else {
-                for(let field of this.uiOption.fielDimensionList) {
-                  if(field["layerNum"] === i+1) {
+
+              let fields = _.filter(this.uiOption.fielDimensionList, (dimension) => {
+                return _.eq(dimension.field.logicalType, "GEO_POINT") || _.eq(dimension.field.logicalType, "GEO_LINE") || _.eq(dimension.field.logicalType, "GEO_POLYGON");
+              });
+
+              for(let field of fields) {
+                if ( this.uiOption.layers[i].type==='symbol' ) {
+                  if ( this.uiOption.layers[i].color["schema"].indexOf('#')!=-1 ) {
                     legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + this.uiOption.layers[i].color["schema"] + '"></em>' + field["alias"] + '</li>';
+                  } else {
+                    legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:#602663"></em>' + field["alias"] + '</li>';
+                  }
+                } else if ( this.uiOption.layers[i].type==='heatmap' ) {
+                  if ( this.uiOption.layers[i].color["schema"].indexOf('#')!=-1 ) {
+                    legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r"></em>' + field["alias"] + '</li>';
+                  } else {
+                    let chartColorList = ChartColorList[this.uiOption.layers[i].color['schema']];
+                    legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + chartColorList[chartColorList.length-1] + '"></em>' + field["alias"] + '</li>';
                   }
                 }
               }
