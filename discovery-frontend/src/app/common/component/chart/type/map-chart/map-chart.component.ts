@@ -741,8 +741,8 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       let rangeList = [];
 
       let featureList = [];
-      for(var i=0;i<uiOption.data[0].features.length;i++) {
-        featureList.push(uiOption.data[0].features[i].properties)
+      for(var i=0;i<data.features.length;i++) {
+        featureList.push(data.features[i].properties)
       }
 
       let featuresGroup = _.groupBy(featureList, uiOption.layers[0].color.column);
@@ -767,44 +767,29 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       let featureSizeType = styleOption.layers[layerNum].size.by;
 
       if(featureColorType === 'MEASURE') {
-          if(styleOption.layers[layerNum].color['ranges']) {
-            for(let range of styleOption.layers[layerNum].color['ranges']) {
-              let rangeMax = range.fixMax;
-              let rangeMin = range.fixMin;
+        const ranges = setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
 
-              if(rangeMax === null) {
-                rangeMax = rangeMin + 1;
-              } // else if(rangeMin === null) {
-                // rangeMin = rangeMax;
-              // }
+        for(let range of ranges) {
+          let rangeMax = range.fixMax;
+          let rangeMin = range.fixMin;
 
-              if( feature.getProperties()[styleOption.layers[layerNum].color.column] > rangeMin &&  feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
-                featureColor = range.color;
-              } else if (rangeMin === null && feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
-                featureColor = range.color;
-              }
-            }
+          if(rangeMax === null) {
+            rangeMax = rangeMin + 1;
+          } // else if(rangeMin === null) {
+            // rangeMin = rangeMax;
+          // }
+
+          if( feature.getProperties()[styleOption.layers[layerNum].color.column] > rangeMin && feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
+            featureColor = range.color;
+          } else if (rangeMin === null && feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
+            featureColor = range.color;
           } else {
-            const ranges = setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
-
-            for(let range of ranges) {
-              let rangeMax = range.fixMax;
-              let rangeMin = range.fixMin;
-
-              if(rangeMax === null) {
-                rangeMax = rangeMin + 1;
-              } // else if(rangeMin === null) {
-                // rangeMin = rangeMax;
-              // }
-
-              if( feature.getProperties()[styleOption.layers[layerNum].color.column] > rangeMin &&
-              feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
-                featureColor = range.color;
-              } else if (rangeMin === null && feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
-                featureColor = range.color;
-              }
+            // 받은 데이터의 소수점을 사용자가 입력한 소수점으로 적용.
+            if (!_.isNaN(parseFloat(feature.getProperties()[styleOption.layers[layerNum].color.column])) && parseFloat(parseFloat(feature.getProperties()[styleOption.layers[layerNum].color.column]).toFixed(styleOption.valueFormat.decimal)) <= rangeMax) {
+              featureColor = range.color;
             }
           }
+        }
       } else if(featureColorType === 'DIMENSION') {
         let colorList = ChartColorList[featureColor];
         featureColor = colorList[(parseInt(feature.getId().substring(26)) % colorList.length) - 1];
