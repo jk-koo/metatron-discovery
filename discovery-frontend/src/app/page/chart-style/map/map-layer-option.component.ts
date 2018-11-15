@@ -314,9 +314,20 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
        }
      }
 
-     if(type === "heatmap" && this.color["by"] === "DIMENSION") {
-       this.color["by"] = "NONE";
-       this.color["schema"] = "#602663";
+     if ( this.color["by"] === "DIMENSION" ) {
+       if ( type === "heatmap" ) {
+         this.color["by"] = "NONE";
+         this.color["schema"] = "#602663";
+       } else if ( type==="tile" ) {
+         if ( this.measureList[0][0] ) {
+           this.color['by'] = 'MEASURE';
+           this.color['schema'] = this.measureColorList[0]['colorNum'];
+           this.color['column'] = this.measureList[0][0];
+         } else {
+           this.color['by'] = 'NONE';
+           this.color['schema'] = '#602663';
+         }
+       }
      }
 
      this.type = type;

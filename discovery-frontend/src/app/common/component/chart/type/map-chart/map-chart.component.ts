@@ -410,53 +410,29 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
 
       // feature 객체 (symbol, line, polygon) 의 색상 지정
       if(styleOption.layers[layerNum].color.column && featureColorType === 'MEASURE') {
-        if(styleOption.layers[layerNum].color['ranges']) {
-          for(let range of styleOption.layers[layerNum].color['ranges']) {
-            let rangeMax = range.fixMax;
-            let rangeMin = range.fixMin;
+        const ranges = setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
 
-            if(rangeMax === null) {
-              rangeMax = rangeMin + 1;
-            } // else if(rangeMin === null) {
-              // rangeMin = rangeMax;
-            // }
+        for(let range of ranges) {
+          let rangeMax = range.fixMax;
+          let rangeMin = range.fixMin;
 
-            // if(rangeMax === rangeMin) {
-              // rangeMin = rangeMax - 1;
-            // }
-            if( feature.getProperties()[styleOption.layers[layerNum].color.column] > rangeMin &&
-            feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
-              featureColor = range.color;
-            } else if (rangeMin === null && feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
-              featureColor = range.color;
-            }
-          }
-        } else {
-          const ranges = setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
+          if(rangeMax === null) {
+            rangeMax = rangeMin + 1;
+          } // else if(rangeMin === null) {
+            // rangeMin = rangeMax;
+          // }
 
-          for(let range of ranges) {
-            let rangeMax = range.fixMax;
-            let rangeMin = range.fixMin;
+          // if(rangeMax === rangeMin) {
+            // rangeMin = rangeMax - 1;
+          // }
 
-            if(rangeMax === null) {
-              rangeMax = rangeMin + 1;
-            } // else if(rangeMin === null) {
-              // rangeMin = rangeMax;
-            // }
-
-            // if(rangeMax === rangeMin) {
-              // rangeMin = rangeMax - 1;
-            // }
-
-            if( feature.getProperties()[styleOption.layers[layerNum].color.column] > rangeMin &&
-            feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
-              featureColor = range.color;
-            } else if (rangeMin === null && feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
-              featureColor = range.color;
-            }
+          if( feature.getProperties()[styleOption.layers[layerNum].color.column] > rangeMin &&
+          feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
+            featureColor = range.color;
+          } else if (rangeMin === null && feature.getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
+            featureColor = range.color;
           }
         }
-
       } else if(featureColorType === 'DIMENSION') {
         const ranges = setDimensionColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
         for(let range of ranges) {
@@ -1667,7 +1643,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
                   } else {
                     legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:#602663"></em>' + field["alias"] + '</li>';
                   }
-                } else if ( this.uiOption.layers[i].type==='heatmap' ) {
+                } else if ( this.uiOption.layers[i].type==='heatmap' || this.uiOption.layers[i].type==='tile' ) {
                   if ( this.uiOption.layers[i].color["schema"].indexOf('#')!=-1 ) {
                     legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r"></em>' + field["alias"] + '</li>';
                   } else {
