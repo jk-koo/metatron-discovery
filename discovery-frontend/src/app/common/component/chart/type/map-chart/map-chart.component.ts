@@ -1591,89 +1591,64 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
                   '<span class="ddp-data">' + 'By ' + this.uiOption.layers[i].color.column + '</span>' +
                   '<ul class="ddp-list-remark">';
 
-                  if(this.uiOption.layers[i].color["ranges"]) {
-                    let rangesLength = this.uiOption.layers[i].color["ranges"].length;
-                    this.uiOption.layers[i].color["ranges"][0]["isMax"] = true;
-                    this.uiOption.layers[i].color["ranges"][rangesLength-1]["isMin"] = true;
+              if(this.mapData[i].valueRange && this.mapData[i].valueRange[this.uiOption.layers[i].color.column]) {
+                const ranges = this.setColorRange(this.uiOption, this.mapData[i], ChartColorList[this.uiOption.layers[i].color['schema']], i, []);
 
-                    for(let range of this.uiOption.layers[i].color["ranges"]) {
+                let rangesLength = ranges.length;
+                ranges[0]["isMax"] = true;
+                ranges[rangesLength-1]["isMin"] = true;
 
-                      let minVal = range.fixMin;
-                      let maxVal = range.fixMax;
+                for(let range of ranges) {
 
-                      if(minVal === null) minVal = maxVal;
-                      if(maxVal === null) maxVal = minVal;
+                    let minVal = range.fixMin;
+                    let maxVal = range.fixMax;
 
-                      legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + range.color + '"></em>';
-                      if (range["isMax"]) {
-                        legendHtml = legendHtml + ' ＞ ' + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat);
-                      } else if (range["isMin"]) {
-                        legendHtml = legendHtml + ' ≤ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
-                      } else {
-                        legendHtml = legendHtml + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat) + ' ~ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
-                      }
-                      legendHtml = legendHtml + '</li>';
-                    }
+                    if(minVal === null) minVal = maxVal;
+                    if(maxVal === null) maxVal = minVal;
+
+                  legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + range.color + '"></em>';
+                  if (range["isMax"]) {
+                    legendHtml = legendHtml + ' ＞ ' + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat);
+                  } else if (range["isMin"]) {
+                    legendHtml = legendHtml + ' ≤ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
                   } else {
-                    if(this.mapData[i].valueRange && this.mapData[i].valueRange[this.uiOption.layers[i].color.column]) {
-                      const ranges = this.setColorRange(this.uiOption, this.mapData[i], ChartColorList[this.uiOption.layers[i].color['schema']], i, []);
-
-                      let rangesLength = ranges.length;
-                      ranges[0]["isMax"] = true;
-                      ranges[rangesLength-1]["isMin"] = true;
-
-                      for(let range of ranges) {
-
-                          let minVal = range.fixMin;
-                          let maxVal = range.fixMax;
-
-                          if(minVal === null) minVal = maxVal;
-                          if(maxVal === null) maxVal = minVal;
-
-                        legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + range.color + '"></em>';
-                        if (range["isMax"]) {
-                          legendHtml = legendHtml + ' ＞ ' + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat);
-                        } else if (range["isMin"]) {
-                          legendHtml = legendHtml + ' ≤ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
-                        } else {
-                          legendHtml = legendHtml + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat) + ' ~ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
-                        }
-                        legendHtml = legendHtml + '</li>';
-                      }
-                    }
-
-                    if(this.uiOption.layers[i].color["customMode"]) {
-                      legendHtml = '<div class="ddp-ui-layer">' +
-                          '<span class="ddp-label">' + this.uiOption.layers[i].name + '</span>' +
-                          '<span class="ddp-data">' + this.uiOption.layers[i].type + ' by ' + this.uiOption.layers[i].color.column + '</span>' +
-                          '<ul class="ddp-list-remark">';
-
-                      if(this.uiOption.layers[i].color["customMode"] === 'SECTION') {
-                        let rangesLength = this.uiOption.layers[i].color["ranges"].length;
-                        this.uiOption.layers[i].color["ranges"][0]["isMax"] = true;
-                        this.uiOption.layers[i].color["ranges"][rangesLength-1]["isMin"] = true;
-
-                        for(let range of this.uiOption.layers[i].color["ranges"]) {
-
-                          let minVal = range.fixMin;
-                          let maxVal = range.fixMax;
-
-                          if(minVal === null) minVal = 0;
-                          if(maxVal === null) maxVal = minVal;
-
-                          legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + range.color + '"></em>';
-                          if (range["isMax"]) {
-                            legendHtml = legendHtml + ' ＞ ' + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat);
-                          } else if (range["isMin"]) {
-                            legendHtml = legendHtml + ' ≤ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
-                          } else {
-                            legendHtml = legendHtml + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat) + ' ~ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
-                          }
-                          legendHtml = legendHtml + '</li>';
-                        }
-                      }
-                    }
+                    legendHtml = legendHtml + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat) + ' ~ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
                   }
+                  legendHtml = legendHtml + '</li>';
+                }
+              }
+
+              if(this.uiOption.layers[i].color["customMode"]) {
+                legendHtml = '<div class="ddp-ui-layer">' +
+                    '<span class="ddp-label">' + this.uiOption.layers[i].name + '</span>' +
+                    '<span class="ddp-data">' + this.uiOption.layers[i].type + ' by ' + this.uiOption.layers[i].color.column + '</span>' +
+                    '<ul class="ddp-list-remark">';
+
+                if(this.uiOption.layers[i].color["customMode"] === 'SECTION') {
+                  let rangesLength = this.uiOption.layers[i].color["ranges"].length;
+                  this.uiOption.layers[i].color["ranges"][0]["isMax"] = true;
+                  this.uiOption.layers[i].color["ranges"][rangesLength-1]["isMin"] = true;
+
+                  for(let range of this.uiOption.layers[i].color["ranges"]) {
+
+                    let minVal = range.fixMin;
+                    let maxVal = range.fixMax;
+
+                    if(minVal === null) minVal = 0;
+                    if(maxVal === null) maxVal = minVal;
+
+                    legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + range.color + '"></em>';
+                    if (range["isMax"]) {
+                      legendHtml = legendHtml + ' ＞ ' + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat);
+                    } else if (range["isMin"]) {
+                      legendHtml = legendHtml + ' ≤ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
+                    } else {
+                      legendHtml = legendHtml + FormatOptionConverter.getFormatValue(minVal, this.uiOption.valueFormat) + ' ~ ' + FormatOptionConverter.getFormatValue(maxVal, this.uiOption.valueFormat);
+                    }
+                    legendHtml = legendHtml + '</li>';
+                  }
+                }
+              }
             } else if(this.uiOption.layers[i].color["by"] === 'NONE') {
               legendHtml = '<div class="ddp-ui-layer">' +
                   '<span class="ddp-label">' + this.uiOption.layers[i].name + '</span>' +
