@@ -632,10 +632,10 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
         });
       } else if(layerType === 'tile') { // 헥사곤 스타일 -> hexagonStyleFunction 이 있어서 필요 없음?
         style = new ol.style.Style({
-          stroke: new ol.style.Stroke({
-            color: outlineColor,
-            width: 1
-          }),
+          // stroke: new ol.style.Stroke({
+          //   color: outlineColor,
+          //   width: 1
+          // }),
           fill: new ol.style.Fill({
             color: featureColor
           })
@@ -807,10 +807,10 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       featureColor = hexToRgbA(featureColor, styleOption.layers[layerNum].color.transparency * 0.01);
 
       let style = new ol.style.Style({
-        stroke: new ol.style.Stroke({
-          color: 'black',
-          width: 1
-        }),
+        // stroke: new ol.style.Stroke({
+        //   color: 'black',
+        //   width: 1
+        // }),
         fill: new ol.style.Fill({
           color: featureColor
         })
