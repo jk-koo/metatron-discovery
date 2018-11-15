@@ -403,7 +403,9 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
      if(colorType === 'NONE') {
        this.color['schema'] = '#602663';
      } else if(colorType === 'DIMENSION') {
-       if ( this.color['schema']==='VC1' ) { this.color['column'] = this.fieldList[0]; }
+       if ( _.map(this.measureColorList, function (measureColor) { return measureColor['colorNum']; }).indexOf(this.color['schema'])!==-1 || _.map(this.measureReverseColorList, function (measureColor) { return measureColor['colorNum']; }).indexOf(this.color['schema'])!==-1 ) {
+         this.color['column'] = this.fieldList[0];
+       }
        this.color['schema'] = 'SC1';
        this.color['ranges'] = this.setDimensionColorRange(this.uiOption, this.resultData['data'][0], ChartColorList[this.color['schema']]);
        // init column
@@ -412,7 +414,9 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
          // this.uiOption.layers[0].color['column'] = "NONE";
        }
      } else if(colorType === 'MEASURE') {
-       if ( this.color['schema']==='SC1' ) { this.color['column'] = this.measureList[0][0]; }
+       if ( _.map(this.measureColorList, function (measureColor) { return measureColor['colorNum']; }).indexOf(this.color['schema'])===-1 && _.map(this.measureReverseColorList, function (measureColor) { return measureColor['colorNum']; }).indexOf(this.color['schema'])==-1 ) {
+         this.color['column'] = this.measureList[0][0];
+       }
        this.color['schema'] = 'VC1';
        this.color['ranges'] = this.setMeasureColorRange(this.uiOption, this.resultData['data'][0], ChartColorList[this.color['schema']]);
        // init column
