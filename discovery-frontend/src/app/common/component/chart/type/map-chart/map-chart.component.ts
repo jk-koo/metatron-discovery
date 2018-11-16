@@ -436,7 +436,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       } else if(featureColorType === 'DIMENSION') {
         const ranges = setDimensionColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
         for(let range of ranges) {
-          if(range["column"] === feature.getProperties()[styleOption.layers[layerNum].color.column]) {
+          if(range["column"] === feature.getProperties()[styleOption.layers[layerNum].color.column] || range["column"] === "undefined") {
             featureColor = range["color"];
           }
         }
