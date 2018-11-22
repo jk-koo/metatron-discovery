@@ -29,7 +29,6 @@ import { Page } from '../../../../domain/common/page';
 import { AbstractWorkbenchComponent } from '../../abstract-workbench.component';
 import { WorkbenchService } from '../../../service/workbench.service';
 import { StringUtil } from '../../../../common/util/string.util';
-import {CommonUtil} from "../../../../common/util/common.util";
 
 @Component({
   selector: 'detail-workbench-database',
@@ -375,8 +374,7 @@ export class DetailWorkbenchDatabase extends AbstractWorkbenchComponent implemen
    */
   private _getParameterForDatabase(webSocketId: string, page?: Page, databaseName?: string): any {
     const params = {
-      webSocketId: webSocketId,
-      loginUserId: CommonUtil.getLoginUserId()
+      webSocketId: webSocketId
     };
     if (page) {
       params['sort'] = page.sort;

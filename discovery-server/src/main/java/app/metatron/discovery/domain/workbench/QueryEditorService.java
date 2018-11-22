@@ -30,7 +30,6 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.TablesNamesFinder;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hive.jdbc.HiveStatement;
 import org.joda.time.DateTime;
@@ -84,9 +83,6 @@ public class QueryEditorService {
   @Autowired
   public SimpMessageSendingOperations messagingTemplate;
 
-  @Autowired
-  private QueryResultRepository queryResultRepository;
-
   public QueryStatus getQueryStatus(String webSocketId) {
     WorkbenchDataSource dataSourceInfo = WorkbenchDataSourceUtils.findDataSourceInfo(webSocketId);
     return dataSourceInfo == null ? null : dataSourceInfo.getQueryStatus();
@@ -96,12 +92,12 @@ public class QueryEditorService {
           QueryEditor queryEditor, JdbcDataConnection jdbcDataConnection,
           Workbench workbench, String query, String webSocketId) {
 
-    return getQueryResult(queryEditor, jdbcDataConnection, workbench, query, webSocketId, null, null);
+    return getQueryResult(queryEditor, jdbcDataConnection, workbench, query, webSocketId, null);
   }
 
   public List<QueryResult> getQueryResult(
           QueryEditor queryEditor, JdbcDataConnection jdbcDataConnection,
-          Workbench workbench, String query, String webSocketId, String databaseName, String loginUserId) {
+          Workbench workbench, String query, String webSocketId, String databaseName) {
     List<QueryResult> queryResults = new ArrayList<>();
 
     //1. 쿼리 목록으로 변환
@@ -152,7 +148,7 @@ public class QueryEditorService {
       LOGGER.debug("Audit Created : " + auditId);
 
       QueryResult queryResult = executeQuery(dataSourceInfo, substitutedQuery, workbench.getId(), webSocketId, jdbcDataConnection,
-              queryHistoryId, auditId, saveToTempTable, queryIndex, queryEditor.getId(), loginUserId);
+              queryHistoryId, auditId, saveToTempTable, queryIndex, queryEditor.getId());
       queryResults.add(queryResult);
 
       //increase query index
@@ -257,7 +253,7 @@ public class QueryEditorService {
 
   private QueryResult executeQuery(WorkbenchDataSource dataSourceInfo, String query, String workbenchId, String webSocketId,
                                    JdbcDataConnection jdbcDataConnection, long queryHistoryId, String auditId,
-                                   Boolean saveToTempTable, int queryIndex, String queryEditorId, String loginUserId){
+                                   Boolean saveToTempTable, int queryIndex, String queryEditorId){
 
     ResultSet resultSet = null;
     QueryResult queryResult = null;
@@ -340,19 +336,6 @@ public class QueryEditorService {
                     queryEditorId, workbenchId, webSocketId);
             resultSet = stmt.getResultSet();
             queryResult = getQueryResult(resultSet, query, null, defaultResultSize, queryEditorId, queryIndex);
-
-            if(jdbcDataConnection instanceof HiveConnection
-                && ((HiveConnection)jdbcDataConnection).isSupportSaveAsHive()
-                && CollectionUtils.isNotEmpty(queryResult.getData())) {
-              try {
-                String storedQueryResultId = queryResultRepository.save(jdbcDataConnection, loginUserId, queryEditorId, queryResult);
-                queryResult.setStoredQueryResultId(storedQueryResultId);
-                queryResult.setResultStored(true);
-              } catch(Exception e) {
-                LOGGER.error(e.getMessage(), e);
-                queryResult.setResultStored(false);
-              }
-            }
           } else {
             queryResult = createMessageResult("OK", query, QueryResult.QueryResultStatus.SUCCESS);
           }
@@ -367,8 +350,15 @@ public class QueryEditorService {
           }
         }
       }
+    } catch(SQLException e){
+      LOGGER.error("Query Execute SQLException : {}", e);
+      queryResult
+              = createMessageResult("An error occurred during query execution.  \n" +
+              "Please contact your system administrator.  \n" +
+              "(SQLException (" + e.getSQLState() + ") (" + e.getErrorCode() + ") : \n" +
+              e.getMessage() + ")", query, QueryResult.QueryResultStatus.FAIL);
     } catch(Exception e){
-      LOGGER.error("Query Execute Error : {}", e);
+      LOGGER.error("Query Execute Exception : {}", e);
       queryResult = createMessageResult(e.getMessage(), query, QueryResult.QueryResultStatus.FAIL);
     } finally {
       if (logThread != null) {

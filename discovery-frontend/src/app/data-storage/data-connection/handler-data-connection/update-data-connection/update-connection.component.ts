@@ -25,8 +25,8 @@ import { SetWorkspacePublishedComponent } from '../../../component/set-workspace
 import { CommonUtil } from '../../../../common/util/common.util';
 import { MomentDatePipe } from '../../../../common/pipe/moment.date.pipe';
 import { StringUtil } from '../../../../common/util/string.util';
-import * as _ from 'lodash';
 import { Dataconnection } from '../../../../domain/dataconnection/dataconnection';
+import * as _ from 'lodash';
 
 @Component({
   selector: 'app-update-connection',
@@ -66,6 +66,8 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
   public createdTime: any;
   public modifiedTime: any;
 
+  // connection properties
+  public properties: any[] = [];
   // database type list
   public dbTypeList: any[];
   // selected database type
@@ -99,12 +101,6 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
   // published
   public published: boolean;
 
-  public enableSaveAsHiveTable: boolean = false;
-  public hiveAdminName: string = '';
-  public hiveAdminPassword: string = '';
-  public hivePersonalDatabasePrefix: string = '';
-  public hdfsConfigPath: string = '';
-
   // connection result flag
   public connectionResultFl: boolean = null;
   // clicked done button flag
@@ -120,12 +116,10 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
   public isShowPasswordRequired: boolean;
   // connection name input validation
   public isShowConnectionNameRequired: boolean;
-  public isShowHiveAdminNameRequired: boolean;
-  public isShowHiveAdminPasswordRequired: boolean;
-  public isShowHivePersonalDatabasePrefixRequired: boolean;
-  public isShowHdfsConfigPathRequired: boolean;
   // connection valid message
   public nameErrorMsg: string;
+  // advanced settings flag
+  public isShowAdvancedSettings: boolean;
 
   // constructor
   constructor(private popupService: PopupService,
@@ -187,22 +181,6 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
    */
   public updateWorkspaces(data): void {
     this.linkedWorkspaces = data;
-  }
-
-  /**
-   * Change database type
-   * @param type
-   */
-  public onChangeDbType(type: any): void {
-    // only works if the selected database type is different
-    if (type !== this.selectedDbType) {
-      // change database type
-      this.selectedDbType = type;
-      // init connection flag
-      this.initConnectionFlag();
-      // init connection result flag
-      this.initConnectionResultFlag();
-    }
   }
 
   /**
@@ -277,6 +255,21 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
     modal.description = this.translateService.instant('msg.storage.ui.dconn.del.description');
     modal.btnName = this.translateService.instant('msg.storage.btn.dconn.del');
     this.modalComponent.init(modal);
+  }
+
+  /**
+   * Click add new property
+   */
+  public onClickAddProperty(): void {
+    this.properties.push({key: '', value: '', keyError: false, valueError: false});
+  }
+
+  /**
+   * Click remove property
+   * @param {number} index
+   */
+  public onClickRemoveProperty(index: number): void {
+    this.properties.splice(index, 1);
   }
 
   /**
@@ -367,29 +360,6 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
       this.isShowPasswordRequired = true;
       result = false;
     }
-
-    if(this.enableSaveAsHiveTable === true) {
-      if(StringUtil.isEmpty(this.hiveAdminName)) {
-        this.isShowHiveAdminNameRequired = true;
-        result = false;
-      }
-      if(StringUtil.isEmpty(this.hiveAdminPassword)) {
-        this.isShowHiveAdminPasswordRequired = true;
-        result = false;
-      }
-      if(StringUtil.isEmpty(this.hiveAdminName)) {
-        this.isShowHiveAdminNameRequired = true;
-        result = false;
-      }
-      if(StringUtil.isEmpty(this.hivePersonalDatabasePrefix)) {
-        this.isShowHivePersonalDatabasePrefixRequired = true;
-        result = false;
-      }
-      if(StringUtil.isEmpty(this.hdfsConfigPath)) {
-        this.isShowHdfsConfigPathRequired = true;
-        result = false;
-      }
-    }
     return result;
   }
 
@@ -398,7 +368,51 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
    * @returns {boolean}
    */
   public doneValidation(): boolean {
-    return this.connectionResultFl && this._connectionNameValidation();
+    return this.connectionResultFl && this._connectionCreateValidation();
+  }
+
+  /**
+   * Property key validation
+   * @param property
+   */
+  public propertyKeyValidation(property: any): void {
+    // check empty
+    if (StringUtil.isEmpty(property.key)) {
+      // set empty message
+      property.keyValidMessage = this.translateService.instant('msg.storage.ui.required');
+      // set error flag
+      property.keyError = true;
+      return;
+    }
+    // check special characters (enable .dot)
+    if (property.key.trim().match(/[\{\}\[\]\/?,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/gi)) {
+      // set duplicate message
+      property.keyValidMessage = this.translateService.instant('msg.storage.ui.custom.property.special.char.disable');
+      // set error flag
+      property.keyError = true;
+      return;
+    }
+    // check duplicate
+    if (this.properties.filter(item => item.key.trim() === property.key.trim()).length > 1) {
+      // set duplicate message
+      property.keyValidMessage = this.translateService.instant('msg.storage.ui.custom.property.duplicated');
+      // set error flag
+      property.keyError = true;
+    }
+  }
+
+  /**
+   * Property value validation
+   * @param property
+   */
+  public propertyValueValidation(property: any): void {
+    // check empty
+    if (StringUtil.isEmpty(property.value)) {
+      // set empty message
+      property.valueValidMessage = this.translateService.instant('msg.storage.ui.required');
+      // set error flag
+      property.valueError = true;
+    }
   }
 
   /**
@@ -423,14 +437,6 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
     this.isShowUrlRequired = null;
     this.isShowUsernameRequired = null;
     this.isShowPasswordRequired = null;
-    this.isShowHiveAdminNameRequired = null;
-    this.isShowHiveAdminPasswordRequired = null;
-    this.isShowHivePersonalDatabasePrefixRequired = null;
-    this.isShowHdfsConfigPathRequired = null;
-  }
-
-  public onChangeEnableSaveAsHiveTable(): void {
-    this.enableSaveAsHiveTable = !this.enableSaveAsHiveTable;
   }
 
   /**
@@ -472,6 +478,22 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
         // loading hide
         this.commonExceptionHandler(error);
       });
+  }
+
+  /**
+   * Is changed properties
+   * @returns {boolean}
+   * @private
+   */
+  private _isChangedProperties(): boolean {
+    if (this._originConnectionData.properties) {
+      // not exist key in properties, different value
+      // not exist key in origin properties, different value
+      return _.some(Object.keys(this._originConnectionData.properties), key => _.every(this.properties, property => key !== property.key || (key === property.key && this._originConnectionData.properties[key] !== property.value)))
+        || _.some(this.properties, property => !this._originConnectionData.properties[property.key] || property.value !== this._originConnectionData.properties[property.key]);
+    } else {
+      return this.properties.length > 0;
+    }
   }
 
   /**
@@ -543,10 +565,10 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
   }
 
   /**
-   * Connection name validation
+   * Connection create validation
    * @returns {boolean}
    */
-  private _connectionNameValidation(): boolean {
+  private _connectionCreateValidation(): boolean {
     // if connection name empty
     if (StringUtil.isEmpty(this.connectionName)) {
       this.isShowConnectionNameRequired = true;
@@ -558,6 +580,18 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
       this.isShowConnectionNameRequired = true;
       this.nameErrorMsg = this.translateService.instant('msg.alert.edit.name.len');
       return false;
+    }
+    // if exist properties
+    if (this.properties.length !== 0) {
+      // properties loop
+      this.properties.forEach((property) => {
+        // check key empty
+        this.propertyKeyValidation(property);
+        // check value empty
+        this.propertyValueValidation(property);
+      });
+      // if exist connection properties
+      return !_.some(this.properties, property => property.keyError || property.valueError);
     }
     return true;
   }
@@ -581,6 +615,22 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
         this.loadingHide();
       })
       .catch(error => this.commonExceptionHandler(error));
+  }
+
+  /**
+   * Get properties parameter
+   * @param properties
+   * @returns {any}
+   * @private
+   */
+  private _getPropertiesParams(properties: any): any {
+    // result
+    const result = {};
+    // properties fields
+    properties.forEach((property) => {
+      result[property.key.trim()] = property.value.trim();
+    });
+    return result;
   }
 
   /**
@@ -616,7 +666,7 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
   }
 
   /**
-   * 업데이트시 필요한 파라메터
+   * Get update params in PATCH method
    * @returns {Object}
    * @private
    */
@@ -645,7 +695,7 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
       if (this.isRequiredCatalog() && this.catalog.trim() !== this._originConnectionData.catalog) {
         params['catalog'] = this.catalog.trim();
       }
-      // if enable URL and diffrent URL
+      // if enable URL and different URL
     } else if (this.url.trim() !== this._originConnectionData.url) {
       params['url'] = this.url.trim();
       // if exist hostname or port in origin connection data
@@ -674,21 +724,10 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
         params['username'] = this.username.trim();
       }
     }
-
-    if(this.selectedDbType.value === 'HIVE') {
-      if(this.enableSaveAsHiveTable) {
-        params['secondaryUsername'] = this.hiveAdminName.trim();
-        params['secondaryPassword'] = this.hiveAdminPassword.trim();
-        params['hdfsConfigurationPath'] = this.hdfsConfigPath.trim();
-        params['personalDatabasePrefix'] = this.hivePersonalDatabasePrefix.trim();
-      } else {
-        params['secondaryUsername'] = '';
-        params['secondaryPassword'] = '';
-        params['hdfsConfigurationPath'] = '';
-        params['personalDatabasePrefix'] = '';
-      }
+    // if changed property
+    if (this._isChangedProperties()) {
+      params['properties'] = this._getPropertiesParams(this.properties);
     }
-
     return params;
   }
 
@@ -762,19 +801,12 @@ export class UpdateConnectionComponent extends AbstractPopupComponent implements
     if (data.hasOwnProperty('linkedWorkspaces')) {
       this.linkedWorkspaces = data.linkedWorkspaces;
     }
-
-    data.secondaryUsername && (this.hiveAdminName = data.secondaryUsername);
-    data.secondaryPassword && (this.hiveAdminPassword = data.secondaryPassword);
-    data.personalDatabasePrefix && (this.hivePersonalDatabasePrefix = data.personalDatabasePrefix);
-    data.hdfsConfigurationPath && (this.hdfsConfigPath = data.hdfsConfigurationPath);
-
-    if(StringUtil.isNotEmpty(data.secondaryUsername)
-      && StringUtil.isNotEmpty(data.secondaryPassword)
-      && StringUtil.isNotEmpty(data.personalDatabasePrefix)
-      && StringUtil.isNotEmpty(data.hdfsConfigurationPath)) {
-      this.enableSaveAsHiveTable = true;
-    } else {
-      this.enableSaveAsHiveTable = false;
+    // properties
+    if (data.hasOwnProperty('properties')) {
+      Object.keys(data.properties)
+        .forEach((key) => {
+        this.properties.push({key: key, value: data.properties[key], keyError: false, valueError: false});
+      });
     }
   }
 }

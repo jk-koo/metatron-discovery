@@ -19,6 +19,8 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.rest.core.config.Projection;
 
+import java.util.Map;
+
 /**
  * Created by kyungtaak on 2016. 11. 12..
  */
@@ -71,20 +73,8 @@ public class DataConnectionProjections {
 
     DateTime getModifiedTime();
 
-    @Value("#{target instanceof T(app.metatron.discovery.domain.datasource.connection.jdbc.HiveConnection) ? target.secondaryUsername : null}")
-    String getSecondaryUsername();
-
-    @Value("#{target instanceof T(app.metatron.discovery.domain.datasource.connection.jdbc.HiveConnection) ? target.secondaryPassword : null}")
-    String getSecondaryPassword();
-
-    @Value("#{target instanceof T(app.metatron.discovery.domain.datasource.connection.jdbc.HiveConnection) ? target.hdfsConfigurationPath : null}")
-    String getHdfsConfigurationPath();
-
-    @Value("#{target instanceof T(app.metatron.discovery.domain.datasource.connection.jdbc.HiveConnection) ? target.personalDatabasePrefix : null}")
-    String getPersonalDatabasePrefix();
-
-    @Value("#{target instanceof T(app.metatron.discovery.domain.datasource.connection.jdbc.HiveConnection) ? target.supportSaveAsHive : null}")
-    Boolean isSupportSaveAsHive();
+    @Value("#{target.getPropertiesMap()}")
+    Object getProperties();
   }
 
   @Projection(name = "forSimpleListView", types = { DataConnection.class })

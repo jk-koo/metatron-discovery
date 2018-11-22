@@ -154,15 +154,12 @@ export class WorkbenchService extends AbstractService {
    *****************************************/
 
   // 쿼리 실행
-  public runSingleQueryWithInvalidQuery(params: QueryEditor, queryIndex: number) {
+  public runSingleQueryWithInvalidQuery(params: QueryEditor) {
     const id = params.editorId;
     const param = {
       query: params.query,
-      webSocketId: params.webSocketId,
-      loginUserId: CommonUtil.getLoginUserId(),
-      queryIndex: queryIndex
+      webSocketId: params.webSocketId
     };
-
     return this.post(this.API_URL + `queryeditors/${id}/query/run`, param); // params => query  값만 사용.
   }
 
@@ -214,15 +211,12 @@ export class WorkbenchService extends AbstractService {
       connInfo.password = connection.password;
     }
     connInfo.authenticationType = connection.authenticationType;
-    connInfo.database = connection.database;
-    connInfo.id = connection.id;
+    connInfo.database = connection.connectionDatabase;
     connInfo.implementor = connection.implementor;
     connInfo.name = connection.name;
-    connInfo.published = connection.published;
     connInfo.type = connection.type;
     connInfo.catalog = connection.catalog;
     connInfo.table = table;
-    connInfo.linkedWorkspaces = connection.linkedWorkspaces;
     connInfo.url = connection.url;
 
     params.connection = connInfo;
@@ -231,10 +225,6 @@ export class WorkbenchService extends AbstractService {
     params.query = table;
 
     return this.post(this.API_URL + 'connections/query/data', params);
-  }
-
-  public saveAsHiveTable(queryEditorId: string, params: any) {
-    return this.post(this.API_URL + `queryeditors/${queryEditorId}/query/save-as-hive`, params);
   }
 
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

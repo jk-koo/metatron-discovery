@@ -23,6 +23,7 @@ import { SetWorkspacePublishedComponent } from '../../../component/set-workspace
 import { CommonUtil } from '../../../../common/util/common.util';
 import { CookieConstant } from '../../../../common/constant/cookie.constant';
 import { StringUtil } from '../../../../common/util/string.util';
+import * as _ from 'lodash';
 
 /**
  * Data connection create component
@@ -37,7 +38,9 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
   @ViewChild(SetWorkspacePublishedComponent)
   private _setWorkspaceComponent: SetWorkspacePublishedComponent;
 
-  // add worksapce list
+  // connection properties
+  public properties: any[] = [];
+  // add workspace list
   public addWorkspaces: any[] = [];
   // database type list
   public dbTypeList: any[];
@@ -58,13 +61,6 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
   public username: string = '';
   // password
   public password: string = '';
-
-  public enableSaveAsHiveTable: boolean = false;
-  public hiveAdminName: string = '';
-  public hiveAdminPassword: string = '';
-  public hivePersonalDatabasePrefix: string = '';
-  public hdfsConfigPath: string = '';
-
   // database
   public database: string = '';
   // sid
@@ -91,12 +87,10 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
   public isShowPasswordRequired: boolean;
   // name input validation
   public isShowConnectionNameRequired: boolean;
-  public isShowHiveAdminNameRequired: boolean;
-  public isShowHiveAdminPasswordRequired: boolean;
-  public isShowHivePersonalDatabasePrefixRequired: boolean;
-  public isShowHdfsConfigPathRequired: boolean;
   // name validation message
   public nameErrorMsg: string;
+  // advanced settings flag
+  public isShowAdvancedSettings: boolean;
 
   // workspace published
   public published: boolean = false;
@@ -132,7 +126,6 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
    * Done click event
    */
   public done(): void {
-    // TODO hive admin account validation(접속 및 입력 여부..)
     // clicked done button flag
     this.isClickedDone = true;
     // if enable done button, create connection
@@ -215,6 +208,21 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
       addWorkspaces: this.addWorkspaces,
     };
     this._setWorkspaceComponent.init('connection', 'create', workspaces);
+  }
+
+  /**
+   * Click add new property
+   */
+  public onClickAddProperty(): void {
+    this.properties.push({key: '', value: '', keyError: false, valueError: false});
+  }
+
+  /**
+   * Click remove property
+   * @param {number} index
+   */
+  public onClickRemoveProperty(index: number): void {
+    this.properties.splice(index, 1);
   }
 
   /**
@@ -305,30 +313,6 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
       this.isShowPasswordRequired = true;
       result = false;
     }
-
-    if(this.enableSaveAsHiveTable === true) {
-      if(StringUtil.isEmpty(this.hiveAdminName)) {
-        this.isShowHiveAdminNameRequired = true;
-        result = false;
-      }
-      if(StringUtil.isEmpty(this.hiveAdminPassword)) {
-        this.isShowHiveAdminPasswordRequired = true;
-        result = false;
-      }
-      if(StringUtil.isEmpty(this.hiveAdminName)) {
-        this.isShowHiveAdminNameRequired = true;
-        result = false;
-      }
-      if(StringUtil.isEmpty(this.hivePersonalDatabasePrefix)) {
-        this.isShowHivePersonalDatabasePrefixRequired = true;
-        result = false;
-      }
-      if(StringUtil.isEmpty(this.hdfsConfigPath)) {
-        this.isShowHdfsConfigPathRequired = true;
-        result = false;
-      }
-    }
-
     return result;
   }
 
@@ -337,7 +321,51 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
    * @returns {boolean}
    */
   public doneValidation(): boolean {
-    return this.connectionResultFl && this._connectionNameValidation();
+    return this.connectionResultFl && this._connectionCreateValidation();
+  }
+
+  /**
+   * property key validation
+   * @param property
+   */
+  public propertyKeyValidation(property: any): void {
+    // check empty
+    if (StringUtil.isEmpty(property.key)) {
+      // set empty message
+      property.keyValidMessage = this.translateService.instant('msg.storage.ui.required');
+      // set error flag
+      property.keyError = true;
+      return;
+    }
+    // check special characters (enable .dot)
+    if (property.key.trim().match(/[\{\}\[\]\/?,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/gi)) {
+      // set duplicate message
+      property.keyValidMessage = this.translateService.instant('msg.storage.ui.custom.property.special.char.disable');
+      // set error flag
+      property.keyError = true;
+      return;
+    }
+    // check duplicate
+    if (this.properties.filter(item => item.key.trim() === property.key.trim()).length > 1) {
+      // set duplicate message
+      property.keyValidMessage = this.translateService.instant('msg.storage.ui.custom.property.duplicated');
+      // set error flag
+      property.keyError = true;
+    }
+  }
+
+  /**
+   * Property value validation
+   * @param property
+   */
+  public propertyValueValidation(property: any): void {
+    // check empty
+    if (StringUtil.isEmpty(property.value)) {
+      // set empty message
+      property.valueValidMessage = this.translateService.instant('msg.storage.ui.required');
+      // set error flag
+      property.valueError = true;
+    }
   }
 
   /**
@@ -362,14 +390,6 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
     this.isShowUrlRequired = null;
     this.isShowUsernameRequired = null;
     this.isShowPasswordRequired = null;
-    this.isShowHiveAdminNameRequired = null;
-    this.isShowHiveAdminPasswordRequired = null;
-    this.isShowHivePersonalDatabasePrefixRequired = null;
-    this.isShowHdfsConfigPathRequired = null;
-  }
-
-  public onChangeEnableSaveAsHiveTable(): void {
-    this.enableSaveAsHiveTable = !this.enableSaveAsHiveTable;
   }
 
   /**
@@ -435,10 +455,10 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
   }
 
   /**
-   * Connection name validation
+   * Connection create validation
    * @returns {boolean}
    */
-  private _connectionNameValidation(): boolean {
+  private _connectionCreateValidation(): boolean {
     // if empty connection name
     if (StringUtil.isEmpty(this.connectionName)) {
       this.isShowConnectionNameRequired = true;
@@ -450,6 +470,19 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
       this.isShowConnectionNameRequired = true;
       this.nameErrorMsg = this.translateService.instant('msg.alert.edit.name.len');
       return false;
+    }
+
+    // if exist properties
+    if (this.properties.length !== 0) {
+      // properties loop
+      this.properties.forEach((property) => {
+        // check key empty
+        this.propertyKeyValidation(property);
+        // check value empty
+        this.propertyValueValidation(property);
+      });
+      // if exist connection properties
+      return !_.some(this.properties, property => property.keyError || property.valueError);
     }
     return true;
   }
@@ -472,7 +505,27 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
     !this.published && (params['workspaces'] = this._getWorkspacesParams());
     // if security type is not MANUAL, delete username and password in params
     this.selectedSecurityType.value !== 'MANUAL' && this._deleteUsernameAndPassword(params);
+    // if exist properties
+    if (this.properties.length !== 0) {
+      params['properties'] = this._getPropertiesParams(this.properties);
+    }
     return params;
+  }
+
+  /**
+   * Get properties parameter
+   * @param properties
+   * @returns {any}
+   * @private
+   */
+  private _getPropertiesParams(properties: any): any {
+    // result
+    const result = {};
+    // properties fields
+    properties.forEach((property) => {
+      result[property.key.trim()] = property.value.trim();
+    });
+    return result;
   }
 
   /**
@@ -499,14 +552,6 @@ export class CreateConnectionComponent extends AbstractPopupComponent implements
       params['password'] = this.password.trim();
       params['username'] = this.username.trim();
     }
-
-    if(this.selectedDbType.value === 'HIVE' && this.enableSaveAsHiveTable) {
-      params['secondaryUsername'] = this.hiveAdminName.trim();
-      params['secondaryPassword'] = this.hiveAdminPassword.trim();
-      params['hdfsConfigurationPath'] = this.hdfsConfigPath.trim();
-      params['personalDatabasePrefix'] = this.hivePersonalDatabasePrefix.trim();
-    }
-
     // if disable URL
     if (!this.isEnableUrl) {
       params['hostname'] = this.hostname.trim();

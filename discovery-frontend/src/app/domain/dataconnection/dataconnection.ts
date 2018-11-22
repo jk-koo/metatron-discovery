@@ -30,9 +30,11 @@ export class Dataconnection extends AbstractHistoryEntity {
   public implementor: ConnectionType;
   public newDataConnection: string;
   public database: string;
+  public connectionDatabase: string;
   public catalog: string;
   public dbname: string;
-
+  // properties
+  public properties: any;
 
   public dataSources: any[];
   public workbenches: any[];
@@ -47,8 +49,6 @@ export class Dataconnection extends AbstractHistoryEntity {
 
   // for UI
   public num:number;
-
-  public supportSaveAsHive: boolean;
 }
 
 export enum ConnectionType {
