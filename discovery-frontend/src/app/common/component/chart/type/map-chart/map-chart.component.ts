@@ -1650,7 +1650,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
                     let chartColorList = ChartColorList[this.uiOption.layers[i].color['schema']];
                     legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + chartColorList[chartColorList.length-1] + '"></em>' + field["alias"] + '</li>';
                   }
-                } else if (this.uiOption.layers[i].type==='polygon') {
+                } else if (this.uiOption.layers[i].type==='polygon' || this.uiOption.layers[i].type==='line') {
                   if ( this.uiOption.layers[i].color["schema"].indexOf('#')!=-1 ) {
                     legendHtml = legendHtml + '<li><em class="ddp-bg-remark-r" style="background-color:' + this.uiOption.layers[i].color["schema"] + '"></em>' + field["alias"] + '</li>';
                   } else {
