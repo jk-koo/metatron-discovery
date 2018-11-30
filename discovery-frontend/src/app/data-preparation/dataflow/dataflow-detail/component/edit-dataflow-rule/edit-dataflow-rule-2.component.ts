@@ -122,7 +122,7 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
 
   // Add rule / editor or builder
   public editorUseFlag: boolean = false;
-  public editorUseLabel: string = 'switch to editor';
+  public editorUseLabel: string = this.translateService.instant('msg.dp.btn.switch.editor');
 
   // input cmd line
   public inputRuleCmd: string = ''; // Rule을 직접 입력시
@@ -382,13 +382,13 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
   public switchEditor() {
     if (this.editorUseFlag === true) {
       this.editorUseFlag = false;
-      this.editorUseLabel = 'switch to editor';
+      this.editorUseLabel = this.translateService.instant('msg.dp.btn.switch.editor');
 
       // Reset command when switch to builder
       // this.initRule();
     } else {
       this.editorUseFlag = true;
-      this.editorUseLabel = 'switch to builder';
+      this.editorUseLabel = this.translateService.instant('msg.dp.btn.switch.builder');
     }
   }
 
@@ -583,6 +583,7 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
   public addRule() {
 
     if( this._isExecAddRule ) {
+      this.editorUseFlag = false;
       return;
     }
 
@@ -598,6 +599,7 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
 
       if (isUndefined(this.ruleVO['command']) || '' === this.ruleVO['command']) {
         Alert.warning(this.translateService.instant('msg.dp.alert.no.data'));
+        this._isExecAddRule = false;
         return;
       }
 
@@ -615,6 +617,7 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
     } else {  // Using editor
       if (this.inputRuleCmd === '') {
         Alert.warning(this.translateService.instant('msg.dp.alert.editor.warn'));
+        this._isExecAddRule = false;
         return;
       }
       rule = {
@@ -625,6 +628,17 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
       };
     }
     if (!isUndefined(rule)) {
+
+      let isErrorCommand : boolean = true;
+      for(var ind in this.commandList) {
+        if ( rule.ruleString.indexOf(this.commandList[ind].command) > -1 ) isErrorCommand = false;
+      }
+      if (isErrorCommand){
+        this._isExecAddRule = false;
+        Alert.error(this.translateService.instant('msg.dp.alert.command.error'));
+        return;
+      }
+
       this.applyRule(rule);
     }
   } // function - addRule
@@ -1120,23 +1134,23 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
    * Open advanced formula input popup (set, keep, derive, delete)
    * @param {string} command
    */
-  public openPopupFormulaInput(command: string) {
+  public openPopupFormulaInput(data: {command : string, val : string}) {
     const fields: Field[] = this.selectedDataSet.gridData.fields;
 
     // variables vary according to the rule name
     // use this._editRuleComp.getValue({}) to get condition of each rule
-    let val : string = 'rowNum';
-    if (command === 'derive') {
-      val = 'deriveVal';
-    } else if (command === 'set') {
-      val = 'inputValue';
-    } else if (command === 'replace' || command === 'setCondition') {
-      val = 'condition';
-    } else if (command === 'keep') {
-      val = 'keepRow';
-    }
+    // let val : string = 'rowNum';
+    // if (command === 'derive') {
+    //   val = 'deriveVal';
+    // } else if (command === 'set') {
+    //   val = 'inputValue';
+    // } else if (command === 'replace' || command === 'setCondition') {
+    //   val = 'condition';
+    // } else if (command === 'keep') {
+    //   val = 'keepRow';
+    // }
 
-    this.extendInputFormulaComponent.open(fields, command, this._editRuleComp.getValue( val ));
+    this.extendInputFormulaComponent.open(fields, data.command, this._editRuleComp.getValue( data.val ));
   }
 
   /**
@@ -1446,7 +1460,7 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
           this._editRuleComp.init(this.selectedDataSet.gridData.fields, this.selectedDataSet.gridData.fields.filter( item => -1 < data.more.col.value.indexOf( item.uuid ) ), {ruleString : '', jsonRuleString : data.more});
           break;
         case 'set':
-          this._editRuleComp.init(this.selectedDataSet.gridData.fields, this.selectedDataSet.gridData.fields.filter( item => -1 < data.more.col.value.indexOf( item.uuid ) ));
+          this._editRuleComp.init(this.selectedDataSet.gridData.fields, this.selectedDataSet.gridData.fields.filter( item => -1 < data.more.col.value.indexOf( item.uuid ) ), {ruleString : '', jsonRuleString : data.more});
           break;
         case 'derive':
           this._editRuleComp.init(this.selectedDataSet.gridData.fields, []);
@@ -1480,13 +1494,11 @@ export class EditDataflowRule2Component extends AbstractPopupComponent implement
     if (this.inputRuleCmd !== '') {
       this.inputRuleCmd = ''; // Empty builder rule string
     } else {
-      return;
-    }
-
-    if (!this.editorUseFlag) {
-      // If no command is selected nothing happens
-      if (this.ruleVO.command === '' || isNullOrUndefined(this.ruleVO.command)) {
-        return;
+      if (!this.editorUseFlag) {
+        // If no command is selected nothing happens
+        if (this.ruleVO.command === '' || isNullOrUndefined(this.ruleVO.command)) {
+          return;
+        }
       }
     }
 
