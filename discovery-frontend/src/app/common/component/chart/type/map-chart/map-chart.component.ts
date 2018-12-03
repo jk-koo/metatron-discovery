@@ -736,7 +736,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       let featureSizeType = styleOption.layers[layerNum].size.by;
 
       if(featureColorType === 'MEASURE') {
-        const ranges = setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
+        const ranges = styleOption.layers[layerNum].color['customMode'] === 'SECTION' ? styleOption.layers[layerNum].color['ranges'] : setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
 
         for(let range of ranges) {
           let rangeMax = range.fixMax;
