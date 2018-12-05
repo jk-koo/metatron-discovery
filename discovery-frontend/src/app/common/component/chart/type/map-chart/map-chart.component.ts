@@ -410,7 +410,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
 
       // feature 객체 (symbol, line, polygon) 의 색상 지정
       if(styleOption.layers[layerNum].color.column && featureColorType === 'MEASURE') {
-        const ranges = setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
+        const ranges = styleOption.layers[layerNum].color['customMode'] === 'SECTION' ? styleOption.layers[layerNum].color['ranges'] : setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
 
         for(let range of ranges) {
           let rangeMax = range.fixMax;
