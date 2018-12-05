@@ -8403,9 +8403,16 @@ em.ddp-icon-mapview3-w:before {background-position-x:0;}
 .ddp-ui-shelf em.ddp-icon-mapview2:before,
 .ddp-ui-shelf em.ddp-icon-mapview3:before {position:absolute; top:50%; left:50%; margin:-8px 0 0 -9px;}
 
-.ddp-map-tooltip  {display:block; position:absolute; top:0; left:0; max-width:300px; padding:9px; box-sizing:border-box;z-index:10;}
+.ddp-map-tooltip  {display:block; position:absolute; top:0; left:0; max-width:257px; padding:9px; box-sizing:border-box;z-index:10;}
+.ddp-map-tooltip .ddp-table-info {table-layout:fixed; }
+.ddp-map-tooltip .ddp-table-info tr td {white-space:nowrap; text-overflow:ellipsis; overflow:hidden;}
 .ddp-map-tooltip .ddp-label {display:block; padding-bottom:6px; color:#fff; font-size:14px; font-weight:bold; vertical-align:middle;}
 .ddp-map-tooltip .ddp-label [class*="ddp-icon-mapview"] {margin-right:5px;}
+.ddp-table-info {width:100%;}
+.ddp-table-info tr th {color:#d0d1d8; font-size:13px; font-weight:normal; text-align:left;}
+.ddp-table-info tr td {color:#fff; font-size:13px; }
+.ddp-table-info tr + tr th,
+.ddp-table-info tr + tr td {padding-top:6px;}
 
 .ddp-map-tooltip .ddp-data-tooltip {margin-bottom:8px;}
 .ddp-map-tooltip .ddp-data-tooltip:last-of-type {margin-bottom:0px;}
