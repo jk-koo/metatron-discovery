@@ -22,6 +22,7 @@ import {
   ColorRangeType
 } from '../../option/define/common';
 import * as ol from 'openlayers';
+import proj4 from 'proj4';
 import * as turf from '@turf/turf'
 
 import { OptionGenerator } from '../../../../../common/component/chart/option/util/option-generator';
@@ -192,10 +193,45 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       })
   });
 
+  // Tango GIS layer
+  // EPSG:5179 좌표계 적용을 위해 맵을 생성하면서 생성
+  public tangoGisLayer = null;
+
   /**
    * create map
    */
   public createMap(): void {
+    // Tango GIS 사용을 위해 EPSG:5179 좌표계 등록
+    proj4.defs('EPSG:5179', '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs');
+    ol.proj.setProj4(proj4);
+    ol.proj.get('EPSG:5179').setExtent([254440, 2871137 - (2048 * 800), 254430 + (2048 * 800), 2871137]);
+
+    // Tango GIS 레이어 생성
+    this.tangoGisLayer = new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        projection: 'EPSG:5179',
+        crossOrigin: 'anonymous',
+        tileGrid: new ol.tilegrid.TileGrid({
+          resolutions: [2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25],
+          tileSize: [400, 400],
+          origin: [254440, 2871137]
+        }),
+        tileUrlFunction: function (coordinate) {
+          if (coordinate === null) { return ""; }
+
+          var z = Math.abs(coordinate[0]).toString();
+          while (z.length < 2) { z = '0' + z; }
+
+          var y = (Math.abs(coordinate[2])-1).toString(16);
+          while (y.length < 8) { y = '0' + y; }
+
+          var x = Math.abs(coordinate[1]).toString(16);
+          while (x.length < 8) { x = '0' + x; }
+
+          return 'https://gis.tango.sktelecom.com/resource/tiles/dawulmap/L' + z + '/R' + y + '/C' + x + '.png';
+        }
+      })
+    });
 
     let layer = this.cartoPositronLayer;
 
@@ -213,6 +249,8 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       layer = this.cartoPositronLayer;
     } else if(this.uiOption.map === 'Dark') {
       layer = this.cartoDarkLayer;
+    } else if(this.uiOption.map === 'TangoGis') {
+      layer = this.tangoGisLayer;
     }
 
     let drawFinished = this.drawFinished;
@@ -253,7 +291,6 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
     //지도 생성 체크
     this.mapVaild = true;
   }
-
 
   /**
    * map style function
@@ -1329,6 +1366,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       this.osmLayer.getSource().setAttributions(this.attribution());
       this.cartoPositronLayer.getSource().setAttributions(this.attribution());
       this.cartoDarkLayer.getSource().setAttributions(this.attribution());
+      this.tangoGisLayer.getSource().setAttributions(this.attribution());
 
       this.olmap.addLayer(symbolLayer);
       this.olmap.addLayer(clusterLayer);
@@ -1398,7 +1436,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       this.osmLayer.getSource().setAttributions(this.attribution());
       this.cartoPositronLayer.getSource().setAttributions(this.attribution());
       this.cartoDarkLayer.getSource().setAttributions(this.attribution());
-
+      this.tangoGisLayer.getSource().setAttributions(this.attribution());
 
       this.olmap.getLayers().getArray()[1] = symbolLayer;
       this.olmap.getLayers().getArray()[2] = clusterLayer;
@@ -1457,12 +1495,15 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       this.osmLayer.setVisible(this.uiOption.showMapLayer);
       this.cartoPositronLayer.setVisible(this.uiOption.showMapLayer);
       this.cartoDarkLayer.setVisible(this.uiOption.showMapLayer);
+      this.tangoGisLayer.setVisible(this.uiOption.showMapLayer);
 
       //choose basemap
       if(this.uiOption.map === 'Light') {
         this.olmap.getLayers().getArray()[0] = this.cartoPositronLayer;
       } else if(this.uiOption.map === 'Dark') {
         this.olmap.getLayers().getArray()[0] = this.cartoDarkLayer;
+      } else if(this.uiOption.map === 'TangoGis') {
+        this.olmap.getLayers().getArray()[0] = this.tangoGisLayer;
       } else {
         this.olmap.getLayers().getArray()[0] = this.osmLayer;
       }
