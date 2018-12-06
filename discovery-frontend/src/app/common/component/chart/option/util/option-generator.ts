@@ -2014,7 +2014,7 @@ export namespace OptionGenerator {
       return {
         type: ChartType.MAP,
         showMapLayer: true,
-        map: "Light",
+        map: "TangoGis",
         licenseNotation: "© OpenStreetMap contributer",
         showDistrictLayer: true,
         districtUnit: "state",
