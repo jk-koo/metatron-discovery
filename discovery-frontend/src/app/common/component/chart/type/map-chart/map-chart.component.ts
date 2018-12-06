@@ -1124,7 +1124,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
     let colorListLength = colorAlterList.length > 0 ? colorAlterList.length - 1 : colorList.length - 1;
 
     // less than 0, set minValue
-    const minValue = data.valueRange[uiOption.layers[layerIndex].color.column].minValue >= 0 ? 0 : _.cloneDeep(data.valueRange[uiOption.layers[layerIndex].color.column].minValue);
+    const minValue = _.cloneDeep(data.valueRange[uiOption.layers[layerIndex].color.column].minValue);
 
     // 차이값 설정 (최대값, 최소값은 값을 그대로 표현해주므로 length보다 2개 작은값으로 빼주어야함)
     const addValue = (data.valueRange[uiOption.layers[layerIndex].color.column].maxValue - minValue) / (colorListLength + 1);

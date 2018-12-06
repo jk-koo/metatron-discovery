@@ -3630,12 +3630,25 @@ export class PageComponent extends AbstractPopupComponent implements OnInit, OnD
       this.chart['setQuery'] = this.query;
     }
 
-    // if ( ChartType.MAP === this.widget.configuration.chart.type ) {
-    //
-    // }
+    let isMap = false;
+    if ( ChartType.MAP === this.widget.configuration.chart.type ) { isMap = true; }
 
     this.datasourceService.searchQuery(cloneQuery).then(
       (data) => {
+        if ( isMap ) {
+          _.each(_.keys(data[0].valueRange), (key) => {
+            if (data[0].valueRange[key].maxValue === '-Infinity' && data[0].valueRange[key].minValue === 'Infinity') {
+              let filter = _.find(uiCloneQuery['filters'], (item) => {
+                return key.indexOf(item['field']) !== -1;
+              });
+
+              if ( filter ) {
+                data[0].valueRange[key].minValue = filter['min'];
+                data[0].valueRange[key].maxValue = filter['max'];
+              }
+            }
+          });
+        }
 
         const resultData = {
           data,
