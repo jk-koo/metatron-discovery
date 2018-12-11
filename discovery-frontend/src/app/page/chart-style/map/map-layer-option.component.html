@@ -445,6 +445,60 @@
                       </label>
                   </div>
               </div> -->
+
+              <!-- symbol : cluster -->
+              <div class="ddp-wrap-divide">
+                <!-- divide -->
+                <div class="ddp-divide2 ">
+                  <div class="ddp-wrap-option-slider">
+                    <span class="ddp-label-slider">{{'msg.page.layer.map.cluster' | translate}}</span>
+                    <!-- Slide THREE -->
+                    <div [ngClass]="{'ddp-checkbox-slide ddp-checkbox-automatic2' : true, 'ddp-disabled' : 'CIRCLE' != uiOption.layers[0].symbol && 'SQUARE' != uiOption.layers[0].symbol && 'TRIANGLE' != uiOption.layers[0].symbol}"
+                         [ngStyle]="{'cursor': 'CIRCLE' != uiOption.layers[0].symbol && 'SQUARE' != uiOption.layers[0].symbol && 'TRIANGLE' != uiOption.layers[0].symbol ? 'no-drop' : null }">
+                      <input type="checkbox" value="None" id="check2" name="check" [ngModel]="uiOption.layers[0]['clustering']" (click)="isEnableClustering();">
+                      <label for="check2"><span class="ddp-slide"></span></label>
+                    </div>
+                    <!-- //Slide THREE -->
+                  </div>
+                  <div class="ddp-list-sub2" *ngIf="uiOption.layers[0]['clustering']">
+                    <!-- divide -->
+                    <div class="ddp-divide2">
+                      <div class="ddp-wrap-option-multy ddp-clear">
+                        <div class="ddp-col-8">
+                          <span class="ddp-label-txt">{{'msg.page.layer.map.cluster.coverage' | translate}}</span>
+                        </div>
+                        <div class="ddp-col-4">
+                          <div class="ddp-box-option-input ddp-type ddp-inline" style="top:0px;margin-left:0px;width:100%;">
+                            <span class="ddp-txt-input">%</span>
+                            <input type="number" input-mask="number" [ngModel]="uiOption.layers[0]['clusterCoverage']" (keyup.enter)="changeClusteringText($event);">
+                          </div>
+                        </div>
+                      </div>
+                      <!-- divide -->
+                      <div class="ddp-divide2">
+                        <div class="ddp-form-slider">
+                          <div class="ddp-ui-slider-type type-per ddp-slider-bg ddp-grid">
+                            <range-slider-component [hideFromTo]="false"
+                                                    [hideMinMax]="true"
+                                                    [keyboard]="false"
+                                                    [min]="0"
+                                                    [max]="100"
+                                                    [from]="uiOption.layers[0]['clusterCoverage']"
+                                                    [type]="'single'"
+                                                    [step]="1"
+                                                    (onFinish)="changeClustering({}, $event)">
+                            </range-slider-component>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- //divide -->
+                    </div>
+                    <!-- //divide -->
+                  </div>
+                </div>
+                <!-- //divide -->
+              </div>
+              <!-- //symbol : cluster -->
           </div>
           <!-- //레이어 유형 : 기호 -->
 

@@ -2042,10 +2042,11 @@ export namespace OptionGenerator {
               "color": "#000000",
               "thickness": "NONE"              // THIN, NORMAL, THICK
             },
-            clustering: false,
+            clustering: true,
             viewRawData: false,
             shape: "HEXAGON",
             coverage: 8,
+            clusterCoverage: 50,
             blur: 10,
             radius: 10,
             pathType: "STRAIGHT"
@@ -2073,10 +2074,11 @@ export namespace OptionGenerator {
               "color": "#000000",
               "thickness": "NONE"              // THIN, NORMAL, THICK
             },
-            clustering: false,
+            clustering: true,
             viewRawData: false,
             shape: "HEXAGON",
             coverage: 8,
+            clusterCoverage: 50,
             blur: 10,
             radius: 10,
             pathType: "STRAIGHT"
@@ -2104,10 +2106,11 @@ export namespace OptionGenerator {
               "color": "#000000",
               "thickness": "NONE"              // THIN, NORMAL, THICK
             },
-            clustering: false,
+            clustering: true,
             viewRawData: false,
             shape: "HEXAGON",
             coverage: 8,
+            clusterCoverage: 50,
             blur: 10,
             radius: 10,
             pathType: "STRAIGHT"

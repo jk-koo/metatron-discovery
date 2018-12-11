@@ -35,6 +35,8 @@ export interface UILayers {
   shape?: string;
 
   coverage?: number;
+
+  clusterCoverage?: number;
 }
 
 /**

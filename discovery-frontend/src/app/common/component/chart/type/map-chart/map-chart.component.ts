@@ -47,6 +47,10 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
   private area: ElementRef;
   private $area: any;
 
+  // Feature icon element
+  @ViewChild('feature')
+  private featureEl: ElementRef;
+
   @ViewChild('legendArea')
   private legendArea: ElementRef;
   private $legendArea: any;
@@ -132,6 +136,46 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
 
     // Legend Area
     this.$legendArea = $(this.legendArea.nativeElement);
+
+    // Feature icon element
+    let canvas = this.featureEl.nativeElement;
+    canvas.width = 30;
+    canvas.height = 20;
+    let context = canvas.getContext('2d');
+    context.fillStyle = '#7E94DE';
+    this.roundRect(context, 0, 0, canvas.width, canvas.height, 4, true, false);
+  }
+
+  private roundRect(context, x, y, width, height, radius, fill, stroke): void {
+
+    if (typeof radius === 'undefined') {
+      radius = 5;
+    }
+    if (typeof radius === 'number') {
+      radius = {tl: radius, tr: radius, br: radius, bl: radius};
+    } else {
+      var defaultRadius = {tl: 0, tr: 0, br: 0, bl: 0};
+      for (var side in defaultRadius) {
+        radius[side] = radius[side] || defaultRadius[side];
+      }
+    }
+    context.beginPath();
+    context.moveTo(x + radius.tl, y);
+    context.lineTo(x + width - radius.tr, y);
+    context.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+    context.lineTo(x + width, y + height - radius.br);
+    context.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+    context.lineTo(x + radius.bl, y + height);
+    context.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+    context.lineTo(x, y + radius.tl);
+    context.quadraticCurveTo(x, y, x + radius.tl, y);
+    context.closePath();
+    if (fill) {
+      context.fill();
+    }
+    if (stroke) {
+      context.stroke();
+    }
   }
 
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -887,6 +931,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
 
   public clusterStyleFunction = (layerNum, data) => {
 
+    let scope: any = this;
     let styleOption = this.uiOption;
     let styleData = data[layerNum];
 
@@ -904,7 +949,71 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       }
     }
 
+    //measure 기준 color range 계산
+    function setColorRange(uiOption, data, colorList: any, colorAlterList = []): ColorRange[] {
+
+      // return value
+      let rangeList = [];
+
+      let rowsListLength = data.features.length;
+
+      let gridRowsListLength = data.features.length;
+
+      // colAlterList가 있는경우 해당 리스트로 설정, 없을시에는 colorList 설정
+      let colorListLength = colorAlterList.length > 0 ? colorAlterList.length - 1 : colorList.length - 1;
+
+      // less than 0, set minValue
+      const minValue = data.valueRange[uiOption.layers[layerNum].color.column].minValue >= 0 ? 0 : _.cloneDeep(data.valueRange[uiOption.layers[0].color.column].minValue);
+
+      // 차이값 설정 (최대값, 최소값은 값을 그대로 표현해주므로 length보다 2개 작은값으로 빼주어야함)
+      const addValue = (data.valueRange[uiOption.layers[layerNum].color.column].maxValue - minValue) / (colorListLength + 1);
+
+      let maxValue = _.cloneDeep(data.valueRange[uiOption.layers[layerNum].color.column].maxValue);
+
+      let shape;
+      // if ((<UIScatterChart>uiOption).pointShape) {
+      //   shape = (<UIScatterChart>uiOption).pointShape.toString().toLowerCase();
+      // }
+
+      // set decimal value
+      const formatValue = ((value) => {
+        return parseFloat((Number(value) * (Math.pow(10, uiOption.valueFormat.decimal)) / Math.pow(10, uiOption.valueFormat.decimal)).toFixed(uiOption.valueFormat.decimal));
+      });
+
+      // decimal min value
+      let formatMinValue = formatValue(data.valueRange[uiOption.layers[layerNum].color.column].minValue);
+      // decimal max value
+      let formatMaxValue = formatValue(data.valueRange[uiOption.layers[layerNum].color.column].maxValue);
+
+      // set ranges
+      for (let index = colorListLength; index >= 0; index--) {
+
+        let color = colorList[index];
+
+        // set the biggest value in min(gt)
+        // if (index === 0) {
+        //
+        //   rangeList.push(UI.Range.colorRange(ColorRangeType.SECTION, color, formatMaxValue, null, formatMaxValue, null, shape));
+        //
+        // } else {
+          // if it's the last value, set null in min(gt)
+          let min = 0 == index ? null : formatValue(maxValue - addValue);
+
+          // if value if lower than minValue, set it as minValue
+          if (min < data.valueRange.minValue && min < 0) min = _.cloneDeep(formatMinValue);
+
+            rangeList.push(UI.Range.colorRange(ColorRangeType.SECTION, color, min, formatValue(maxValue), min, formatValue(maxValue), shape));
+
+          maxValue = min;
+        // }
+      }
+
+      return rangeList;
+    }
+
     return function (feature, resolution) {
+      let size = feature.get('features').length;
+
       let layerType = (<any>window).uiOption.layers[layerNum].type;
       let symbolType = (<any>window).uiOption.layers[layerNum].symbol;
       let outlineType = (<any>window).uiOption.layers[layerNum].outline.thickness;
@@ -912,102 +1021,71 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
       let outlineColor = (<any>window).uiOption.layers[layerNum].outline.color;
       let featureColorType = (<any>window).uiOption.layers[layerNum].color.by;
 
+      let featureSize = 5;
+
       let outlineWidth = 0.00000001;
-      if(outlineType === 'THIN')  {
-        outlineWidth = 1;
-      } else if(outlineType === 'NORMAL') {
-        outlineWidth = 2;
-      } else if(outlineType === 'THICK') {
-        outlineWidth = 3;
+      switch (outlineType) {
+        case 'THIN': outlineWidth = 1; break;
+        case 'NORMAL': outlineWidth = 2; break;
+        case 'THICK': outlineWidth = 3; break;
       }
 
-      if(featureColorType === 'MEASURE') {
-
-        if(styleData.valueRange) {
+      if (size === 1) {
+        if (featureColorType === 'NONE') {
+          featureColor = styleOption.layers[layerNum].color.schema;
+        } else if (featureColorType === 'DIMENSION') {
           let colorList = ChartColorList[featureColor];
-          let avgNum = styleData.valueRange[styleOption.layers[layerNum].color.column].maxValue / colorList.length;
-
-          let featurePropVal = 0;
-
-          if(feature.getProperties()["features"]) {
-            for(let clusterFeature of feature.getProperties()["features"]) {
-              featurePropVal = featurePropVal + clusterFeature.getProperties()[styleOption.layers[layerNum].color.column];
-            }
-            featurePropVal = featurePropVal / feature.getProperties()["features"].length;
-          }
-
-          for(let i=0;i<colorList.length;i++) {
-            if(featurePropVal <= avgNum * (i+1) &&
-              featurePropVal >= avgNum * (i)) {
-              featureColor = colorList[i];
+          featureColor = colorList[Math.floor(Math.random() * (colorList.length-1)) + 1];
+        } else if (featureColorType === 'MEASURE') {
+          if ('MEASURE' === (<any>window).uiOption.layers[layerNum].size.by) {
+            featureSize = parseInt(feature.get(styleOption.layers[layerNum].size.column)) / (styleData.valueRange[styleOption.layers[layerNum].size.column].maxValue / 30);
+            if(featureSize < 2) {
+              featureSize = 2;
             }
           }
-        }
 
-        if(styleOption.layers[layerNum].color['customMode'] === 'SECTION') {
-          for(let range of styleOption.layers[layerNum].color['ranges']) {
+          const ranges = styleOption.layers[layerNum].color['customMode'] === 'SECTION' ? styleOption.layers[layerNum].color['ranges'] : setColorRange(styleOption, styleData, ChartColorList[styleOption.layers[layerNum].color['schema']]);
+          for(let range of ranges) {
             let rangeMax = range.fixMax;
             let rangeMin = range.fixMin;
 
             if(rangeMax === null) {
               rangeMax = rangeMin + 1;
-            } // else if(rangeMin === null) {
-              // rangeMin = 0;
-            // }
-
-            let featurePropVal = 0;
-
-            for(let clusterFeature of feature.getFeatures()["features"]) {
-              featurePropVal = featurePropVal + clusterFeature.getProperties()[styleOption.layers[layerNum].color.column];
             }
-            featurePropVal = featurePropVal / feature.getFeatures()["features"].length;
 
-            if( featurePropVal > rangeMin &&  featurePropVal < rangeMax) {
+            if( feature.getProperties()['features'][0].getProperties()[styleOption.layers[layerNum].color.column] > rangeMin &&
+            feature.getProperties()['features'][0].getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
               featureColor = range.color;
-            } else if (rangeMin === null && featurePropVal < rangeMax) {
+            } else if (rangeMin === null && feature.getProperties()['features'][0].getProperties()[styleOption.layers[layerNum].color.column] <= rangeMax) {
               featureColor = range.color;
             }
           }
         }
+
+        featureColor = hexToRgbA(featureColor, styleOption.layers[layerNum].color.transparency * 0.01);
       }
-      else if(featureColorType === 'DIMENSION') {
-        let colorList = ChartColorList[featureColor];
-        featureColor = colorList[Math.floor(Math.random() * (colorList.length-1)) + 1];
-      } else if(featureColorType === 'NONE') {
-        featureColor = styleOption.layers[layerNum].color.schema;
-      }
-
-      featureColor = hexToRgbA(featureColor, styleOption.layers[layerNum].color.transparency * 0.01);
-
-      let size = 0;
-
-      if(feature.get('features')) {
-        size = feature.get('features').length;
-      }
-
-      let style = new ol.style.Style({
-        image: new ol.style.Circle({
-            radius: size,
-            fill: new ol.style.Fill({
-                color: 'blue'
-            })
-        })
-      });
 
       // 클러스터링은 symbol의 CIRCLE, SQUARE, TRIANGLE 만 지원
+      let style = null;
       if(layerType === 'symbol') {
+        let canvas = scope.featureEl.nativeElement;
+
         switch (symbolType) {
           case 'CIRCLE' :
             style = new ol.style.Style({
-              image: new ol.style.Circle({
-                  radius: 15,
+              image: size === 1 ? new ol.style.Circle({
+                  radius: featureSize,
                   fill: new ol.style.Fill({
                       color: featureColor
                   }),
                   stroke: new ol.style.Stroke({color: outlineColor, width: outlineWidth})
+              }) : new ol.style.Icon({
+                img: canvas,
+                imgSize: [canvas.width, canvas.height],
+                opacity: 0.85
               }),
               text: new ol.style.Text({ // 클러스터링 되는 갯수 라벨링
-                text: size.toString(), // 클러스터링 갯수
+                text: size === 1 ? '' : size.toString(), // 클러스터링 갯수
                 fill: new ol.style.Fill({
                   color: '#fff'
                 })
@@ -1016,15 +1094,19 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
             break;
           case 'SQUARE' :
             style = new ol.style.Style({
-              image: new ol.style.RegularShape({
+              image: size === 1 ? new ol.style.RegularShape({
                 fill: new ol.style.Fill({color: featureColor}),
                 stroke: new ol.style.Stroke({color: outlineColor, width: outlineWidth}),
                 points: 4,
-                radius: 15,
+                radius: featureSize,
                 angle: Math.PI / 4
+              }) : new ol.style.Icon({
+                img: canvas,
+                imgSize: [canvas.width, canvas.height],
+                opacity: 0.85
               }),
               text: new ol.style.Text({
-                text: size.toString(),
+                text: size === 1 ? '' : size.toString(),
                 fill: new ol.style.Fill({
                   color: '#fff'
                 })
@@ -1033,16 +1115,20 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
             break;
           case 'TRIANGLE' :
             style = new ol.style.Style({
-              image: new ol.style.RegularShape({
+              image: size === 1 ? new ol.style.RegularShape({
                 fill: new ol.style.Fill({color: featureColor}),
                 stroke: new ol.style.Stroke({color: outlineColor, width: outlineWidth}),
                 points: 3,
-                radius: 15,
+                radius: featureSize,
                 rotation: Math.PI / 4,
                 angle: 0
+              }) : new ol.style.Icon({
+                img: canvas,
+                imgSize: [canvas.width, canvas.height],
+                opacity: 0.85
               }),
               text: new ol.style.Text({
-                text: size.toString(),
+                text: size === 1 ? '' : size.toString(),
                 fill: new ol.style.Fill({
                   color: '#fff'
                 })
@@ -1052,7 +1138,18 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
         }
       }
 
-      return style;
+      if (style) {
+        return style;
+      } else {
+        return new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: featureSize,
+            fill: new ol.style.Fill({
+              color: featureColor
+            })
+          })
+        });
+      }
     }
   }
 
@@ -1347,7 +1444,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
     source.addFeatures(features);
 
     let clusterSource = new ol.source.Cluster({
-      distance: 30, // 클러스터링 반경 px단위
+      distance: this.uiOption.layers[0].clusterCoverage, // 클러스터링 반경 px단위
       source: source
     });
 
@@ -1739,7 +1836,11 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
           return f;
         });
 
-      if(feature) {
+      if (feature.getProperties()['features'] && feature.getProperties()['features'].length === 1) {
+        feature = feature.getProperties()['features'][0];
+      }
+
+      if(feature && !feature.getProperties()['features']) {
 
         let geomType = feature.getGeometry().getType();
         let coords = [0,0];
@@ -1772,7 +1873,6 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
           } else if(feature.get('layerNum') === 3) {
             tooltipHtml = tooltipHtml + '<span class="ddp-label"><em class="ddp-icon-mapview3-w"></em> ' + tooltipOption.layers[2].name + '</span>';
           }
-
         }
 
         tooltipHtml = tooltipHtml + '<table class="ddp-table-info"><colgroup><col width="70px"><col width="*"></colgroup><tbody>';

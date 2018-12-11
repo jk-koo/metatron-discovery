@@ -2585,6 +2585,8 @@
   "msg.page.layer.map.radius": "반경값",
   "msg.page.layer.map.coverage": "적용범위",
   "msg.page.layer.map.clustering": "클러스터링",
+  "msg.page.layer.map.cluster": "클러스터 사용",
+  "msg.page.layer.map.cluster.coverage": "적용 범위",
   "msg.page.layer.map.stroke.max.width": "굵기 최대값",
   "msg.page.layer.map.view": "원본보기",
   "msg.page.format.format.title": "표시 형식",

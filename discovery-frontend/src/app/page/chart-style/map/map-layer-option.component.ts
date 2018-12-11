@@ -127,6 +127,8 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
   //tilemap coverage
   public coverage: number = 8;
 
+  public clusterCoverage: number = 50;
+
   //linemap type
   public pathType: string = "SOLID";
 
@@ -180,7 +182,7 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
 
   public availableRangeValue: string;
 
-  public clustering: boolean = false;
+  public clustering: boolean = true;
   public viewRawData: boolean = false;
   public layerOptions: Object;
   public measureList = new Array(new Array(), new Array(), new Array());
@@ -347,6 +349,9 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
    public symbolType(symbolType: string): void {
 
      this.symbol = symbolType;
+     if ('CIRCLE' != symbolType && 'SQUARE' != symbolType && 'TRIANGLE' != symbolType) {
+       this.isEnableClustering(true);
+     }
 
      // 해당 레이어 타입으로 설정
      this.uiOption = <UIOption>_.extend({}, this.uiOption, {
@@ -593,7 +598,7 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
        if (this.uiOption.layers[0]) {
          if (!this.uiOption.layers[0].size) this.uiOption.layers[0].size = {};
          this.uiOption.layers[0].size['column'] = "NONE";
-         this.clustering = false;
+         // this.clustering = false;
        }
      }
 
@@ -826,6 +831,7 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
        blur: this.blur,
        radius: this.radius,
        coverage: this.coverage,
+       clusterCoverage: this.clusterCoverage,
        thickness: this.thickness,
        pathType: this.pathType
      },this.uiOption.layers[1],this.uiOption.layers[2]];
@@ -1952,6 +1958,47 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
           // scope.change.emit(scope.getData());
         // }
       })
+  }
+
+  /**
+   * symbol, polygon layer - clustering
+   */
+  public isEnableClustering(offCluster: boolean) {
+    if (offCluster) {
+      this.clustering = false;
+    } else {
+      this.clustering = !this.clustering;
+      this.applyLayers();
+    }
+  }
+
+  public changeClustering(obj: any, $event: any) {
+    this.clusterCoverage = $event.from;
+    this.applyLayers();
+  }
+
+  public changeClusteringText($event: any) {
+    let inputValue = parseFloat($event.target.value);
+    if( _.isEmpty(inputValue.toString()) || isNaN(inputValue) || inputValue > 100 || inputValue < 0) {
+      $event.target.value = this.clusterCoverage;
+      return;
+    } else {
+      this.clusterCoverage = inputValue;
+      this.applyLayers();
+    }
+  }
+
+  /**
+   * apply layer ui option
+   * @param {Object} drawChartParam - call api or not
+   */
+  private applyLayers() {
+
+    this.uiOption = <UIOption>_.extend({}, this.uiOption, {
+      layers: this.changeLayerOption()
+    });
+
+    this.update();
   }
 
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
