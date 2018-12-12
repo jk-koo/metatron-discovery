@@ -1038,7 +1038,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
           featureColor = colorList[Math.floor(Math.random() * (colorList.length-1)) + 1];
         } else if (featureColorType === 'MEASURE') {
           if ('MEASURE' === (<any>window).uiOption.layers[layerNum].size.by) {
-            featureSize = parseInt(feature.get(styleOption.layers[layerNum].size.column)) / (styleData.valueRange[styleOption.layers[layerNum].size.column].maxValue / 30);
+            featureSize = parseInt(feature.getProperties()['features'][0].get(styleOption.layers[layerNum].size.column)) / (styleData.valueRange[styleOption.layers[layerNum].size.column].maxValue / 30);
             if(featureSize < 2) {
               featureSize = 2;
             }
@@ -1836,7 +1836,7 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
           return f;
         });
 
-      if (feature.getProperties()['features'] && feature.getProperties()['features'].length === 1) {
+      if (feature && feature.getProperties()['features'] && feature.getProperties()['features'].length === 1) {
         feature = feature.getProperties()['features'][0];
       }
 
