@@ -349,9 +349,6 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
    public symbolType(symbolType: string): void {
 
      this.symbol = symbolType;
-     if ('CIRCLE' != symbolType && 'SQUARE' != symbolType && 'TRIANGLE' != symbolType) {
-       this.isEnableClustering(true);
-     }
 
      // 해당 레이어 타입으로 설정
      this.uiOption = <UIOption>_.extend({}, this.uiOption, {
@@ -1963,13 +1960,9 @@ export class MapLayerOptionComponent extends BaseOptionComponent implements OnIn
   /**
    * symbol, polygon layer - clustering
    */
-  public isEnableClustering(offCluster: boolean) {
-    if (offCluster) {
-      this.clustering = false;
-    } else {
-      this.clustering = !this.clustering;
-      this.applyLayers();
-    }
+  public isEnableClustering() {
+    this.clustering = !this.clustering;
+    this.applyLayers();
   }
 
   public changeClustering(obj: any, $event: any) {

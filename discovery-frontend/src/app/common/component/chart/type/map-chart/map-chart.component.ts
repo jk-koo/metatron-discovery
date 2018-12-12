@@ -1135,7 +1135,67 @@ export class MapChartComponent extends BaseChart implements OnInit, OnDestroy, A
               })
             });
             break;
-        }
+          case 'PIN' :
+            style = new ol.style.Style({
+              image: size === 1 ? new ol.style.Icon(({
+                color: featureColor,
+                crossOrigin: 'anonymous',
+                scale: featureSize * 0.1,
+                src: '../../../../../../assets/images/ic_pin.png'
+              })) : new ol.style.Icon({
+                img: canvas,
+                imgSize: [canvas.width, canvas.height],
+                opacity: 0.85
+              }),
+              text: new ol.style.Text({
+                text: size === 1 ? '' : size.toString(),
+                fill: new ol.style.Fill({
+                  color: '#fff'
+                })
+              })
+            });
+            break;
+          case 'PLANE' :
+            style = new ol.style.Style({
+              image: size === 1 ? new ol.style.Icon(/** @type {module:ol/style/Icon~Options} */ ({
+                color: featureColor,
+                crossOrigin: 'anonymous',
+                scale: featureSize * 0.1,
+                src: '../../../../../../assets/images/ic_map_airport.png'
+              })) : new ol.style.Icon({
+                img: canvas,
+                imgSize: [canvas.width, canvas.height],
+                opacity: 0.85
+              }),
+              text: new ol.style.Text({
+                text: size === 1 ? '' : size.toString(),
+                fill: new ol.style.Fill({
+                  color: '#fff'
+                })
+              })
+            });
+            break;
+          case 'USER' :
+            style = new ol.style.Style({
+              image: size === 1 ? new ol.style.Icon(/** @type {module:ol/style/Icon~Options} */ ({
+                color: featureColor,
+                crossOrigin: 'anonymous',
+                scale: featureSize * 0.1,
+                src: '../../../../../../assets/images/ic_map_human.png'
+              })) : new ol.style.Icon({
+                img: canvas,
+                imgSize: [canvas.width, canvas.height],
+                opacity: 0.85
+              }),
+              text: new ol.style.Text({
+                text: size === 1 ? '' : size.toString(),
+                fill: new ol.style.Fill({
+                  color: '#fff'
+                })
+              })
+            });
+            break;
+         }
       }
 
       if (style) {
