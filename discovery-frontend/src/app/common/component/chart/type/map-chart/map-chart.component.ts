@@ -575,7 +575,11 @@ export class MapChartComponent extends BaseChart implements AfterViewInit{
     this.osmLayer.getSource().setAttributions(this.attribution());
     this.cartoPositronLayer.getSource().setAttributions(this.attribution());
     this.cartoDarkLayer.getSource().setAttributions(this.attribution());
-    this.tangoGisLayer = this.createTangoGisLayer();
+
+    if( !this.olmap ) {
+      this.tangoGisLayer = this.createTangoGisLayer();
+      this.tangoGisLayer.getSource().setAttributions(this.attribution());
+    }
 
     ////////////////////////////////////////////////////////
     // Map style
