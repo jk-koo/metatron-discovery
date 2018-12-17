@@ -19,6 +19,8 @@ import com.google.common.base.Preconditions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.List;
 
 import app.metatron.discovery.common.datasource.LogicalType;
@@ -39,9 +41,9 @@ public class GeoHashFormat extends GeoFormat implements FieldFormat {
   public GeoHashFormat(@JsonProperty("method") String method,
                        @JsonProperty("precision") Integer precision) {
 
-    this.method = "geohex";
+    this.method = StringUtils.isEmpty(method) ? "geohex" : method;
 
-    if(precision == null) {
+    if (precision == null) {
       this.precision = 4;
     } else {
       Preconditions.checkArgument(precision > 0 && precision < 13, "precision value must be between 1 and 12.");

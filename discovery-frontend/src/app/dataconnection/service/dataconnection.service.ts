@@ -16,6 +16,9 @@ import {Injectable, Injector} from '@angular/core';
 import {AbstractService} from '../../common/service/abstract.service';
 import {CommonUtil} from '../../common/util/common.util';
 import {Page} from '../../domain/common/page';
+import {isNullOrUndefined} from "util";
+import { CriterionKey, ListCriterion } from '../../domain/datasource/listCriterion';
+import { CriteriaFilter } from '../../domain/datasource/criteriaFilter';
 
 @Injectable()
 export class DataconnectionService extends AbstractService {
@@ -145,6 +148,11 @@ export class DataconnectionService extends AbstractService {
     connInfo.database = dataconnection.connectionDatabase;
     connInfo.catalog = dataconnection.catalog;
     connInfo.url = dataconnection.url;
+
+    // properties 속성이 존재 할경우
+    if( !isNullOrUndefined(dataconnection.properties) ){
+      connInfo.properties = dataconnection.properties;
+    }
 
     params.connection = connInfo;
     params.database = dataconnection.database;
@@ -306,5 +314,54 @@ export class DataconnectionService extends AbstractService {
    */
   public getTableListForHiveInMetadata(params: object): Promise<any> {
     return this.post(this.URL_CONNECTIONS + '/metadata/tables/jdbc', params);
+  }
+
+  /**
+   * Get criterion list in connection
+   * @returns {Promise<CriteriaFilter>}
+   */
+  public getCriterionListInConnection(): Promise<CriteriaFilter> {
+    return this.get(this.API_URL + 'connections/criteria');
+  }
+
+  /**
+   * Get criterion in connection
+   * @param {CriterionKey} criterionKey
+   * @returns {Promise<ListCriterion>}
+   */
+  public getCriterionInConnection(criterionKey: CriterionKey): Promise<ListCriterion> {
+    return this.get(this.API_URL + `connections/criteria/${criterionKey}`);
+  }
+
+  /**
+   * Get connection list
+   * @param {number} page
+   * @param {number} size
+   * @param {string} sort
+   * @param params
+   * @param {string} projection
+   * @returns {Promise<any>}
+   */
+  public getConnectionList(page: number, size: number, sort: string, params: any, projection: string = 'list'): Promise<any> {
+    return this.post(this.API_URL + `connections/filter?projection=${projection}&page=${page}&size=${size}&sort=${sort}`, params);
+  }
+
+  public getEnabledConnectionTypes(): Promise<any> {
+    return this.get(this.URL_CONNECTIONS + '/connections/types');
+  }
+  public deleteTable(connectionId: string, database: string, table: string, webSocketId: string): Promise<any> {
+    const url = this.API_URL + `connections/${connectionId}/databases/${database}/tables/${table}?webSocketId=${webSocketId}`;
+    return this.delete(url);
+  }
+
+  public renameTable(connectionId: string, database: string, fromTable: string, toTable: string, webSocketId: string): Promise<any> {
+    const url = this.API_URL + `connections/${connectionId}/databases/${database}/tables/${fromTable}`;
+
+    const params = {
+      webSocketId: webSocketId,
+      table: toTable
+    };
+
+    return this.put(url, params);
   }
 }

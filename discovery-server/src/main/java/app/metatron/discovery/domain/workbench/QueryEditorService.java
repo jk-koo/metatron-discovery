@@ -54,10 +54,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -436,6 +433,7 @@ public class QueryEditorService {
     queryResult.setNumRows(rowNumber <= 0 ? 0L : Long.valueOf(rowNumber - 1));
     queryResult.setQueryResultStatus(QueryResult.QueryResultStatus.SUCCESS);
     queryResult.setCsvFilePath(tempFileName);
+    queryResult.setCsvFileAbsolutePath(csvBaseDir + tempFileName);
     LOGGER.info("Query row count : {}", queryResult.getNumRows());
 
     return queryResult;
@@ -475,11 +473,20 @@ public class QueryEditorService {
         
         LOGGER.debug("Removed remain query all");
         stmt = dataSourceInfo.getCurrentStatement();
-        if(stmt != null)
+        if(stmt != null){
+          ResultSet rs = stmt.getResultSet();
+          if(rs != null){
+            LOGGER.debug("ResultSet is not null");
+            JdbcUtils.closeResultSet(rs);
+          }
           stmt.cancel();
+        }
+
         LOGGER.debug("Statement is canceled");
       }
-    } catch (SQLException sqle) {
+    } catch (SQLFeatureNotSupportedException e) {
+      LOGGER.debug("Presto not Support cancel...");
+    } catch (SQLException e) {
     } finally {
       JdbcUtils.closeStatement(stmt);
     }

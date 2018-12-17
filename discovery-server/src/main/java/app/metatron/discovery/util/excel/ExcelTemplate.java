@@ -1,8 +1,11 @@
 package app.metatron.discovery.util.excel;
 
+import com.google.common.collect.Lists;
 import com.monitorjbl.xlsx.StreamingReader;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.formula.functions.T;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -30,25 +33,52 @@ public class ExcelTemplate {
     }
   }
 
-  public <C,R> ExcelSheet<C, R> getSheet(String sheetName,
-                                         ExcelFirstRowMapper<C> firstRowMapper,
-                                         ExcelRowMapper<C, R> rowMapper,
-                                         boolean skipFirstRow) {
-    int sheetIndex = workbook.getSheetIndex(sheetName);
+  public <T> List<T> getRows(String sheetName, ExcelRowMapper<T> rowMapper) {
+    return this.getRows(sheetName, rowMapper, -1);
+  }
+
+  public <T> List<T> getRows(String sheetName, ExcelRowMapper<T> rowMapper, int limit) {
+    int sheetIndex = 0;
+    if(StringUtils.isNotEmpty(sheetName)) {
+      sheetIndex = workbook.getSheetIndex(sheetName);
+    }
+
     Sheet sheet = workbook.getSheetAt(sheetIndex);
 
-    C headers = null;
-    List<R> rows = new ArrayList<>();
+    List<T> rows = new ArrayList<>();
+    int rowNumber = 1;
     for (Row row : sheet) {
-      if(row.getRowNum() == 0) {
-        headers = firstRowMapper.mapRow(row);
-        if(skipFirstRow == false) {
-          rows.add(rowMapper.mapRow(headers, row));
-        }
-      } else {
-        rows.add(rowMapper.mapRow(headers, row));
+      if((rowNumber - 1) == limit) {
+        break;
       }
+
+      T mappedRow = rowMapper.mapRow(rowNumber, row);
+      if (mappedRow != null) {
+        rows.add(rowMapper.mapRow(rowNumber, row));
+      }
+
+      rowNumber++;
     }
-    return new ExcelSheet<>(headers, rows);
+    return rows;
+  }
+
+  public int getTotalRows(String sheetName) {
+    int sheetIndex = 0;
+    if(StringUtils.isNotEmpty(sheetName)) {
+      sheetIndex = workbook.getSheetIndex(sheetName);
+    }
+
+    Sheet sheet = workbook.getSheetAt(sheetIndex);
+    return sheet.getLastRowNum() + 1;
+  }
+
+  public List<String> getSheetNames() {
+    List<String> sheetNames = Lists.newArrayList();
+    int sheetsCount = workbook.getNumberOfSheets();
+    for (int i = 0; i < sheetsCount; i++) {
+      sheetNames.add(workbook.getSheetAt(i).getSheetName());
+    }
+
+    return sheetNames;
   }
 }

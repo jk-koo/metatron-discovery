@@ -20,15 +20,14 @@ import {
   Injector,
   Input,
   OnDestroy,
-  OnInit, Output,
+  OnInit,
+  Output,
   ViewChild
 } from '@angular/core';
 import * as pixelWidth from 'string-pixel-width';
 import {AbstractPopupComponent} from "../../../common/component/abstract-popup.component";
-import {DatasourceFile, Field, File} from '../../../domain/datasource/datasource';
 import {GridComponent} from "../../../common/component/grid/grid.component";
 import {FileLikeObject, FileUploader} from "ng2-file-upload";
-import {DatasourceService} from "../../../datasource/service/datasource.service";
 import {CommonConstant} from "../../../common/constant/common.constant";
 import {CookieConstant} from "../../../common/constant/cookie.constant";
 import {Alert} from "../../../common/util/alert.util";
@@ -38,7 +37,6 @@ import {header, SlickGridHeader} from "../../../common/component/grid/grid.heade
 import {WorkbenchService} from "../../service/workbench.service";
 import {CommonUtil} from "../../../common/util/common.util";
 import {StringUtil} from "../../../common/util/string.util";
-import {validate} from "codelyzer/walkerFactory/walkerFn";
 
 @Component({
   selector: 'app-import-file',
@@ -64,13 +62,10 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
   // 업로드 결과
   private uploadResult: any;
 
-  // file data
-  private datasourceFile: DatasourceFile = new DatasourceFile;
-
   public importingTableName: string = '';
   public errMsgImportingTableName: string = '';
   public isInvalidImportingTableName: boolean = false;
-
+  public importFile: ImportFile;
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    | Protected Variables
    |-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
@@ -104,13 +99,14 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
   // grid hide
   public clearGrid = true;
 
+  public selectedSheetName: string = '';
+
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    | Constructor
    |-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
   // 생성자
-  constructor(private datasourceService: DatasourceService,
-              private workbenchService: WorkbenchService,
+  constructor(private workbenchService: WorkbenchService,
               protected elementRef: ElementRef,
               protected injector: Injector) {
 
@@ -118,7 +114,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
 
     this.uploader = new FileUploader(
       {
-        url: CommonConstant.API_CONSTANT.API_URL + 'datasources/file/upload',
+        url: CommonConstant.API_CONSTANT.API_URL + 'common/file',
         //allowedFileType: this.allowFileType
       }
     );
@@ -129,7 +125,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
     // set option
     this.uploader.setOptions({
       url: CommonConstant.API_CONSTANT.API_URL
-      + 'datasources/file/upload',
+      + 'common/file',
       headers: [
         { name: 'Accept', value: 'application/json, text/plain, */*' },
         {
@@ -152,21 +148,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
     // 업로드 완료후 작동
     this.uploader.onCompleteAll = () => {
       if (this.uploadResult && this.uploadResult.success) {
-        // 업로드한 파일 정보 세팅
-        this.setDatasourceFile(this.uploadResult);
-        // 파일 데이터 가져오기
         this.getFileData();
-
-        // 기본 데이터베이스 테이블명 설정
-        if(this.datasourceFile.filename) {
-          if(this.datasourceFile.filename.trim().endsWith('.csv')) {
-            this.importingTableName = this.datasourceFile.filename.substring(0, this.datasourceFile.filename.indexOf(".csv"));
-            this.isInvalidImportingTableName = false;
-          } else if(this.datasourceFile.selectedSheetName) {
-            this.importingTableName = this.datasourceFile.selectedSheetName;
-            this.isInvalidImportingTableName = false;
-          }
-        }
       }
     };
 
@@ -217,22 +199,24 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
   public done() {
     if (this.getDoneValidation()) {
       if(this.validateColumnNames() == false) {
-        Alert.error('컬럼명은 알파벳과 숫자 언더스코어만 허용됩니다.');
+        Alert.error(this.translateService.instant('msg.bench.alert.invalid-hive-name-rule', {
+          value: 'Column'
+        }));
         return;
       }
 
       const params = {
         tableName: this.importingTableName.trim(),
         firstRowHeadColumnUsed: !this.createHeadColumnFl,
-        uploadedFile: this.datasourceFile.filepath,
+        filePath: this.importFile.filepath,
         loginUserId: CommonUtil.getLoginUserId(),
         webSocketId: this.webSocketId
       };
 
       if(this.isExcelFile()) {
         params['type'] = 'excel';
-        params['sheetName'] = this.datasourceFile.selectedSheetName;
-      } else if(this.isCsvFile()) {
+        params['sheetName'] = this.selectedSheetName;
+      } else {
         params['type'] = 'csv';
         if(this.separator) {
           params['lineSep'] = (this.separator + '').replace(/\\n/gi, '\n').replace(/\\r/gi, '\r').replace(/\\t/gi, '\t');
@@ -240,8 +224,6 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
         if(this.delimiter) {
           params['delimiter'] = (this.delimiter + '').replace(/\\n/gi, '\n').replace(/\\r/gi, '\r').replace(/\\t/gi, '\t');
         }
-      } else {
-        // TODO... 예외 처리...
       }
 
       this.loadingShow();
@@ -278,7 +260,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {string}
    */
   public get getFileName(): string {
-    return this.datasourceFile.filename;
+    return this.importFile.filename;
   }
 
   /**
@@ -286,7 +268,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {number}
    */
   public get getFileSize(): number {
-    return this.datasourceFile.fileSize;
+    return this.importFile.fileSize;
   }
 
   /**
@@ -294,7 +276,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {any[]}
    */
   public get getSheets(): any[] {
-    return this.datasourceFile.sheets;
+    return this.importFile.sheets;
   }
 
   /**
@@ -302,7 +284,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {any[]}
    */
   public getFields(): any[] {
-    return this.datasourceFile.hasOwnProperty('selectedFile') && this.datasourceFile.selectedFile.fields;
+    return this.importFile.filename && this.importFile.fields;
   }
 
   /**
@@ -310,7 +292,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {string}
    */
   public get getSelectedSheetName(): string {
-    return this.datasourceFile.selectedSheetName;
+    return this.selectedSheetName;
   }
 
   /**
@@ -326,36 +308,8 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {number}
    */
   public getRowLength() {
-    return this.datasourceFile.hasOwnProperty('selectedFile') && this.datasourceFile.selectedFile.totalRows;
+    return this.importFile.totalRows;
   }
-
-  /**
-   * logical Types
-   * @returns {{}}
-   */
-  public getLogicalTypes() {
-    const result = {};
-    this.getFields().forEach((field) => {
-      // result 에 해당 타입이 있다면
-      if (result.hasOwnProperty(field.logicalType)) {
-        result[field.logicalType] += 1;
-      } else {
-        // 없다면 새로 생성
-        result[field.logicalType] = 1;
-      }
-    });
-
-    const keys = Object.keys(result);
-
-    const logicalTypes = [];
-
-    keys.forEach((key) => {
-      logicalTypes.push({label: key, value: result[key]});
-    });
-
-    return logicalTypes;
-  }
-
 
   /**
    * 다음페이지로 가기위한 validation
@@ -369,7 +323,9 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
     } else {
       if(StringUtil.isAlphaNumericUnderscore(this.importingTableName) === false) {
         this.isInvalidImportingTableName = true;
-        this.errMsgImportingTableName = this.translateService.instant('msg.bench.alert.invalid-hive-table-name');
+        this.errMsgImportingTableName = this.translateService.instant('msg.bench.alert.invalid-hive-name-rule', {
+          value: 'Table'
+        });
         return false;
       }
     }
@@ -377,8 +333,8 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
     this.isInvalidImportingTableName = false;
 
     // 선택한 파일이 존재하는지
-    if (this.datasourceFile.hasOwnProperty('selectedFile')
-      && this.datasourceFile.selectedFile.hasOwnProperty('fields')
+    if (this.importFile.filename
+      && this.importFile.fields
       && !this.clearGrid) {
       return true;
     }
@@ -388,8 +344,8 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
 
   public validateColumnNames(): boolean {
     let validate = true;
-    this.datasourceFile.selectedFile.fields.forEach(field => {
-      if(StringUtil.isAlphaNumericUnderscore(field.name) == false) {
+    this.importFile.fields.forEach(field => {
+      if(StringUtil.isAlphaNumericUnderscore(field) == false) {
         validate = false;
       }
     });
@@ -406,7 +362,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {boolean}
    */
   public isCsvFile(): boolean {
-    return (!this.datasourceFile.hasOwnProperty('sheets'));
+    return this.importFile && this.importFile.isCsvFile();
   }
 
   /**
@@ -414,7 +370,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {boolean}
    */
   public isExcelFile(): boolean {
-    return this.datasourceFile.hasOwnProperty('sheets') && this.datasourceFile.sheets.length !== 0;
+    return this.importFile && this.importFile.isExcelFile();
   }
 
   /**
@@ -423,7 +379,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {boolean}
    */
   public isSelectedSheet(sheetName): boolean {
-    return this.datasourceFile.selectedSheetName === sheetName;
+    return this.selectedSheetName === sheetName;
   }
 
   /**
@@ -431,8 +387,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @returns {boolean}
    */
   public isSuccessFileUpload(): boolean {
-    return (this.datasourceFile.hasOwnProperty('filekey')
-        && !isUndefined(this.datasourceFile.filekey));
+    return (this.importFile && this.importFile.filekey && !isUndefined(this.importFile.filekey));
   }
 
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -445,7 +400,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    */
   public onSelectedSheet(sheetName) {
     // 시트이름 저장
-    this.datasourceFile.selectedSheetName = sheetName;
+    this.selectedSheetName = sheetName;
     // file data 조회
     this.getFileData();
   }
@@ -529,7 +484,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @param data
    * @param {Field[]} fields
    */
-  private updateGrid(data: any, fields: Field[]) {
+  private updateGrid(data: any, fields: string[]) {
     // headers
     const headers: header[] = this.getHeaders(fields);
     // rows
@@ -543,17 +498,17 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
    * @param {Field[]} fields
    * @returns {header[]}
    */
-  private getHeaders(fields: Field[]) {
+  private getHeaders(fields: string[]) {
     return fields.map(
-      (field: Field) => {
+      (field: string) => {
 
         /* 70 는 CSS 상의 padding 수치의 합산임 */
-        const headerWidth:number = Math.floor(pixelWidth(field.name, { size: 12 })) + 70;
+        const headerWidth:number = Math.floor(pixelWidth(field, { size: 12 })) + 70;
 
         return new SlickGridHeader()
-          .Id(field.name)
-          .Name('<span style="padding-left:20px;"><em class="' + this.getFieldTypeIconClass(field.logicalType.toString()) + '"></em>' + field.name + '</span>')
-          .Field(field.name)
+          .Id(field)
+          .Name('<span style="padding-left:20px;">' + field + '</span>')
+          .Field(field)
           .Behavior('select')
           .Selectable(false)
           .CssClass('cell-selection')
@@ -598,7 +553,7 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
     // 로딩 show
     this.loadingShow();
     // 파일 조회
-    this.datasourceService.getDatasourceFile(this.datasourceFile.filekey, this.getDatasourceFileParams(this.isCsvFile()))
+    this.workbenchService.getPreviewImportFile(this.workbenchId, JSON.parse(this.uploadResult.response).filekey, this.getDatasourceFileParams(this.isCsvFile()))
       .then((result) => {
         // 로딩 hide
         this.loadingHide();
@@ -607,12 +562,38 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
           Alert.warning(this.translateService.instant('msg.storage.alert.file.import.error'));
           return;
         }
-        // file data
-        this.setSelectedFile(result);
-        // grid show
+
+        this.importFile = new ImportFile();
+        this.importFile.fileType = this.uploadResult.item.file.type;
+        this.importFile.filename = this.uploadResult.item.file.name;
+        this.importFile.fileSize = this.uploadResult.item.file.size;
+        this.importFile.filepath = JSON.parse(this.uploadResult.response).filePath;
+        this.importFile.filekey = JSON.parse(this.uploadResult.response).filekey;
+        this.importFile.fields = result.fields;
+        this.importFile.records = result.records;
+        this.importFile.totalRows = result.totalRecords;
+
+        if(result.sheets) {
+          this.importFile.sheets = result.sheets;
+          if(this.selectedSheetName === '') {
+            this.selectedSheetName = result.sheets[0];
+          }
+        }
+
         this.clearGrid = false;
         // grid 출력
-        this.updateGrid(this.datasourceFile.selectedFile.data, this.datasourceFile.selectedFile.fields);
+        this.updateGrid(result.records, result.fields);
+
+        // 기본 데이터베이스 테이블명 설정
+        if(this.importFile.filename) {
+          if(this.importFile.isCsvFile()) {
+            this.importingTableName = this.importFile.filename.substring(0, this.importFile.filename.indexOf(".csv"));
+            this.isInvalidImportingTableName = false;
+          } else if(this.selectedSheetName) {
+            this.importingTableName = this.selectedSheetName;
+            this.isInvalidImportingTableName = false;
+          }
+        }
       })
       .catch((error) => {
         // 로딩 hide
@@ -632,52 +613,12 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
     };
 
     if (!isCsvFile) {
-      params['sheet'] = this.datasourceFile.selectedSheetName;
+      params['sheet'] = this.selectedSheetName;
     } else {
       params['lineSep'] = this.separator;
       params['columnSeq'] = this.delimiter;
     }
     return params;
-  }
-
-  /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-   | Private Method - setter
-   |-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
-
-  /**
-   * 선택한 file data 저장
-   * @param sheet
-   */
-  private setSelectedFile(file) {
-    // 선택한 sheet data 저장
-    this.datasourceFile.selectedFile = new File();
-    // 데이터
-    this.datasourceFile.selectedFile = file;
-  }
-
-  /**
-   * 데이터소스 업로드 된 파일 세팅
-   * @param uploadResult
-   */
-  private setDatasourceFile(uploadResult) {
-    this.datasourceFile = new DatasourceFile;
-    // response 데이터
-    const response: any = JSON.parse(uploadResult.response);
-    // 파일 이름
-    this.datasourceFile.filename = uploadResult.item.file.name;
-    // 파일 크기
-    this.datasourceFile.fileSize = uploadResult.item.file.size;
-    // 파일 path
-    this.datasourceFile.filepath = response.filePath;
-    // 파일 key
-    this.datasourceFile.filekey = response.filekey;
-    // sheet 가 존재한다면
-    if (response.hasOwnProperty('sheets') && response.sheets.length !== 0) {
-      // sheet
-      this.datasourceFile.sheets = response.sheets;
-      // 초기 선택한 파일명 선택
-      this.datasourceFile.selectedSheetName = response.sheets[0];
-    }
   }
 
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -688,3 +629,25 @@ export class ImportFileComponent extends AbstractPopupComponent implements OnIni
     this.allowFileType = ['csv', 'text/csv', 'xls', 'xlsx', 'application/vnd.ms-excel'];
   }
 }
+
+class ImportFile {
+  public fileType: string;
+  public fields: string[];
+  public records: any[];
+  public totalRows: number = 0;
+  public sheets: string[];
+  public filename: string;
+  public filepath: string;
+  public fileSize: number;
+  public filekey: string;
+
+  public isExcelFile(): boolean {
+    return this.fileType !== 'text/csv';
+  }
+
+  public isCsvFile(): boolean {
+    return this.fileType === 'text/csv';
+  }
+}
+
+

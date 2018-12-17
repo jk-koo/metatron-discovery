@@ -115,28 +115,7 @@
                 <strong>/ {{getRowLength()}}</strong>
                 {{'msg.storage.ui.dsource.create.file.row' | translate}}
               </div>
-              <div class="ddp-data-form"
-                   *ngIf="getFields()">
-                <strong class="ddp-cursor"
-                        (click)="typeShowFl = !typeShowFl"
-                        (clickOutside)="typeShowFl = false">{{getLogicalTypes().length}}</strong>
-                {{'msg.storage.ui.dsource.create.file.types' | translate}}
-                <!-- 팝업 -->
-                <div class="ddp-wrap-popup2 ddp-types" *ngIf="typeShowFl">
-                  <ul class="ddp-list-popup">
-                    <li *ngFor="let type of getLogicalTypes()">
-                      <a href="javascript:">
-                        <em class="{{getFieldTypeIconClass(type.label)}}"></em>
-                        {{type.value}} {{'msg.storage.th.row' | translate}}
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-                <!-- //팝업 -->
-              </div>
             </div>
-
-
           </div>
           <!-- 그리드 영역 -->
           <div class="ddp-wrap-grid">

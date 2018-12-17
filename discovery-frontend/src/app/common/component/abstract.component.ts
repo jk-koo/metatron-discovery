@@ -166,6 +166,19 @@ export class AbstractComponent implements OnInit, AfterViewInit, OnDestroy, CanC
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    | Public Method
    |-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
+  /**
+   * add body scroll hidden class
+   */
+  public addBodyScrollHidden() {
+    $('body').removeClass('body-hidden').addClass('body-hidden');
+  } // function - addBodyScrollHidden
+
+  /**
+   * remove body scroll hidden class
+   */
+  public removeBodyScrollHidden() {
+    $('body').removeClass('body-hidden');
+  } // function - removeBodyScrollHidden
 
   // noinspection JSMethodCanBeStatic
   /**
@@ -434,6 +447,7 @@ export class AbstractComponent implements OnInit, AfterViewInit, OnDestroy, CanC
       { label: 'PostgreSQL', value: 'POSTGRESQL', icon: 'type-postgre' },
       { label: 'Hive', value: 'HIVE', icon: 'type-hive' },
       { label: 'Presto', value: 'PRESTO', icon: 'type-presto' },
+      { label: 'Druid', value: 'DRUID', icon: 'type-druid' },
       // { label: 'Apache Phoenix', value: 'PHOENIX', icon: 'type-pache' },
       // { label: 'Tibero', value: 'TIBERO', icon: 'type-tibero' }
     ];

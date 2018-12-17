@@ -14,10 +14,15 @@
 
 package app.metatron.discovery.domain.datasource.connection;
 
+import app.metatron.discovery.common.criteria.ListCriterion;
+import app.metatron.discovery.common.criteria.ListFilter;
 import app.metatron.discovery.common.entity.SearchParamValidator;
+import app.metatron.discovery.common.exception.GlobalErrorCodes;
+import app.metatron.discovery.common.exception.MetatronException;
 import app.metatron.discovery.common.exception.ResourceNotFoundException;
 import app.metatron.discovery.domain.datasource.DataSourceProperties;
 import app.metatron.discovery.domain.datasource.Field;
+import app.metatron.discovery.domain.datasource.connection.dto.RenameDatabaseTable;
 import app.metatron.discovery.domain.datasource.connection.jdbc.*;
 import app.metatron.discovery.domain.datasource.ingestion.file.FileFormat;
 import app.metatron.discovery.domain.datasource.ingestion.jdbc.JdbcIngestionInfo;
@@ -27,7 +32,9 @@ import app.metatron.discovery.domain.mdm.source.MetadataSourceRepository;
 import app.metatron.discovery.domain.workbench.Workbench;
 import app.metatron.discovery.domain.workbench.WorkbenchRepository;
 import app.metatron.discovery.domain.workbench.hive.HiveNamingRule;
+import app.metatron.discovery.domain.workbench.util.WorkbenchDataSource;
 import app.metatron.discovery.domain.workbench.util.WorkbenchDataSourceUtils;
+import app.metatron.discovery.util.AuthUtils;
 import app.metatron.discovery.util.PolarisUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -46,13 +53,11 @@ import org.springframework.data.rest.webmvc.PersistentEntityResourceAssembler;
 import org.springframework.data.rest.webmvc.RepositoryRestController;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.web.bind.annotation.*;
 
 import javax.sql.DataSource;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -65,6 +70,9 @@ public class DataConnectionController {
 
   @Autowired
   JdbcConnectionService connectionService;
+
+  @Autowired
+  DataConnectionFilterService connectionFilterService;
 
   @Autowired
   DataConnectionRepository connectionRepository;
@@ -297,7 +305,8 @@ public class DataConnectionController {
         //getting recent partition
         List<Map<String, Object>> partitionList = connectionService.getPartitionList(hiveConnection, checkRequest);
         if(partitionList == null || partitionList.isEmpty()){
-          throw new ResourceNotFoundException("There is no partitions in table(" + checkRequest.getQuery() + ").");
+          throw new JdbcDataConnectionException(JdbcDataConnectionErrorCodes.STAGEDB_PREVIEW_TABLE_SQL_ERROR,
+                  "There is no partitions in table(" + checkRequest.getQuery() + ").");
         }
 
         Map<String, Object> recentPartition
@@ -416,6 +425,70 @@ public class DataConnectionController {
     return ResponseEntity.ok(
         connectionService.searchTables((JdbcDataConnection) connection, databaseName, tableName, webSocketId, pageable)
     );
+  }
+
+  @RequestMapping(value = "/connections/{connectionId}/databases/{databaseName}/tables/{tableName}", method = RequestMethod.DELETE)
+  public @ResponseBody ResponseEntity<?> deleteTableInDatabase(
+      @PathVariable("connectionId") String connectionId,
+      @PathVariable("databaseName") String database,
+      @PathVariable("tableName") String table,
+      @RequestParam(value = "webSocketId") String webSocketId) {
+    DataConnection connection = connectionRepository.findOne(connectionId);
+    if(connection == null) {
+      throw new ResourceNotFoundException(connectionId);
+    }
+
+    SingleConnectionDataSource connectionDataSource = getConnectionDataSourceFromWebSocket(connection, database, webSocketId);
+
+    final String sql = String.format("DROP TABLE %s.%s", database, table);
+    connectionService.ddlQuery((JdbcDataConnection)connection, connectionDataSource, sql);
+
+    return ResponseEntity.noContent().build();
+  }
+
+  @RequestMapping(value = "/connections/{connectionId}/databases/{databaseName}/tables/{tableName}", method = RequestMethod.PUT)
+  public @ResponseBody ResponseEntity<?> renameTableInDatabase(
+      @PathVariable("connectionId") String connectionId,
+      @PathVariable("databaseName") String database,
+      @PathVariable("tableName") String table,
+      @RequestBody RenameDatabaseTable renameTable) {
+    DataConnection connection = connectionRepository.findOne(connectionId);
+    if(connection == null) {
+      throw new ResourceNotFoundException(connectionId);
+    }
+
+    SingleConnectionDataSource connectionDataSource = getConnectionDataSourceFromWebSocket(connection, database, renameTable.getWebSocketId());
+
+    final String sql = String.format("ALTER TABLE %s.%s RENAME TO %s.%s", database, table, database, renameTable.getTable());
+    connectionService.ddlQuery((JdbcDataConnection)connection, connectionDataSource, sql);
+
+    return ResponseEntity.noContent().build();
+  }
+
+  private SingleConnectionDataSource getConnectionDataSourceFromWebSocket(DataConnection connection, String database, String webSocketId) {
+    WorkbenchDataSource dataSourceInfo = WorkbenchDataSourceUtils.findDataSourceInfo(webSocketId);
+    if(connection instanceof JdbcDataConnection) {
+      SingleConnectionDataSource connectionDataSource;
+      if(connection instanceof HiveConnection) {
+        HiveConnection hiveConnection = (HiveConnection)connection;
+
+        if(hiveConnection.isSupportPersonalDatabase()) {
+          if(hiveConnection.isOwnPersonalDatabase(AuthUtils.getAuthUserName(), database)) {
+            connectionDataSource = dataSourceInfo.getSecondarySingleConnectionDataSource();
+          } else {
+            throw new MetatronException(GlobalErrorCodes.BAD_REQUEST_CODE, String.format("%s database is not %s", database, AuthUtils.getAuthUserName()));
+          }
+        } else {
+          throw new MetatronException(GlobalErrorCodes.BAD_REQUEST_CODE, String.format("%s connection is not supported", connection.getId()));
+        }
+      } else {
+        connectionDataSource = dataSourceInfo.getSingleConnectionDataSource();
+      }
+
+      return connectionDataSource;
+    } else {
+      throw new MetatronException(GlobalErrorCodes.BAD_REQUEST_CODE, String.format("%s connection is not supported", connection.getId()));
+    }
   }
 
   @RequestMapping(value = "/connections/{connectionId}/databases/{databaseName}/tables/{tableName}/columns",
@@ -694,6 +767,88 @@ public class DataConnectionController {
       throw new DataConnectionException(DataConnectionErrorCodes.NOT_SUPPORTED_API,
               "/connections/query/hive/partitions/validate API required strict mode.");
     }
+  }
+
+  @RequestMapping(value = "/connections/criteria", method = RequestMethod.GET)
+  public ResponseEntity<?> getCriteria() {
+    List<ListCriterion> listCriteria = connectionFilterService.getListCriterion();
+    List<ListFilter> defaultFilter = connectionFilterService.getDefaultFilter();
+
+    HashMap<String, Object> response = new HashMap<>();
+    response.put("criteria", listCriteria);
+    response.put("defaultFilters", defaultFilter);
+
+    return ResponseEntity.ok(response);
+  }
+
+  @RequestMapping(value = "/connections/criteria/{criterionKey}", method = RequestMethod.GET)
+  public ResponseEntity<?> getCriterionDetail(@PathVariable(value = "criterionKey") String criterionKey) {
+
+    DataConnectionListCriterionKey criterionKeyEnum = DataConnectionListCriterionKey.valueOf(criterionKey);
+
+    if(criterionKeyEnum == null){
+      throw new ResourceNotFoundException("Criterion(" + criterionKey + ") is not founded.");
+    }
+
+    ListCriterion criterion = connectionFilterService.getListCriterionByKey(criterionKeyEnum);
+    return ResponseEntity.ok(criterion);
+  }
+
+  @RequestMapping(value = "/connections/filter", method = RequestMethod.POST)
+  public @ResponseBody ResponseEntity<?> filterDataConnection(@RequestBody DataConnectionFilterRequest request,
+                                                           Pageable pageable,
+                                                           PersistentEntityResourceAssembler resourceAssembler) {
+
+    List<String> workspaces = request == null ? null : request.getWorkspace();
+    List<String> createdBys = request == null ? null : request.getCreatedBy();
+    List<String> userGroups = request == null ? null : request.getUserGroup();
+    List<String> implementors = request == null ? null : request.getImplementor();
+    List<String> authenticationTypes = request == null ? null : request.getAuthenticationType();
+    DateTime createdTimeFrom = request == null ? null : request.getCreatedTimeFrom();
+    DateTime createdTimeTo = request == null ? null : request.getCreatedTimeTo();
+    DateTime modifiedTimeFrom = request == null ? null : request.getModifiedTimeFrom();
+    DateTime modifiedTimeTo = request == null ? null : request.getModifiedTimeTo();
+    String containsText = request == null ? null : request.getContainsText();
+    List<Boolean> published = request == null ? null : request.getPublished();
+
+    LOGGER.debug("Parameter (workspace) : {}", workspaces);
+    LOGGER.debug("Parameter (createdBy) : {}", createdBys);
+    LOGGER.debug("Parameter (userGroup) : {}", userGroups);
+    LOGGER.debug("Parameter (implementors) : {}", implementors);
+    LOGGER.debug("Parameter (authenticationTypes) : {}", authenticationTypes);
+    LOGGER.debug("Parameter (createdTimeFrom) : {}", createdTimeFrom);
+    LOGGER.debug("Parameter (createdTimeTo) : {}", createdTimeTo);
+    LOGGER.debug("Parameter (modifiedTimeFrom) : {}", modifiedTimeFrom);
+    LOGGER.debug("Parameter (modifiedTimeTo) : {}", modifiedTimeTo);
+    LOGGER.debug("Parameter (containsText) : {}", containsText);
+    LOGGER.debug("Parameter (published) : {}", published);
+
+    // Validate Implements
+    List<DataConnection.Implementor> implementorEnumList
+            = request.getEnumList(implementors, DataConnection.Implementor.class, "implementor");
+
+    // Validate authenticationTypes
+    List<DataConnection.AuthenticationType> authenticationTypeEnumList
+            = request.getEnumList(authenticationTypes, DataConnection.AuthenticationType.class, "authenticationType");
+
+    // Validate createdTimeFrom, createdTimeTo
+    SearchParamValidator.range(null, createdTimeFrom, createdTimeTo);
+
+    // Validate modifiedTimeFrom, modifiedTimeTo
+    SearchParamValidator.range(null, modifiedTimeFrom, modifiedTimeTo);
+
+    // 기본 정렬 조건 셋팅
+    if (pageable.getSort() == null || !pageable.getSort().iterator().hasNext()) {
+      pageable = new PageRequest(pageable.getPageNumber(), pageable.getPageSize(),
+              new Sort(Sort.Direction.DESC, "createdTime", "name"));
+    }
+
+    Page<DataConnection> dataConnections = connectionFilterService.findDataConnectionByFilter(
+            workspaces, createdBys, userGroups, implementorEnumList, authenticationTypeEnumList,
+            createdTimeFrom, createdTimeTo, modifiedTimeFrom, modifiedTimeTo, containsText, published, pageable
+    );
+
+    return ResponseEntity.ok(this.pagedResourcesAssembler.toResource(dataConnections, resourceAssembler));
   }
 }
 

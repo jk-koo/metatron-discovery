@@ -17,6 +17,7 @@ import {AbstractService} from '../../common/service/abstract.service';
 import {QueryEditor, Workbench} from '../../domain/workbench/workbench';
 import {CommonUtil} from '../../common/util/common.util';
 import {Page} from '../../domain/common/page';
+import {isNullOrUndefined} from "util";
 
 @Injectable()
 export class WorkbenchService extends AbstractService {
@@ -154,12 +155,18 @@ export class WorkbenchService extends AbstractService {
    *****************************************/
 
   // 쿼리 실행
-  public runSingleQueryWithInvalidQuery(params: QueryEditor) {
+  public runSingleQueryWithInvalidQuery(params: QueryEditor, additional: any) {
     const id = params.editorId;
     const param = {
       query: params.query,
-      webSocketId: params.webSocketId
+      webSocketId: params.webSocketId,
+      runIndex: additional.runIndex
     };
+
+    if(additional.retryQueryResultOrder) {
+      param['retryQueryResultOrder'] = additional.retryQueryResultOrder;
+    }
+
     return this.post(this.API_URL + `queryeditors/${id}/query/run`, param); // params => query  값만 사용.
   }
 
@@ -219,6 +226,11 @@ export class WorkbenchService extends AbstractService {
     connInfo.table = table;
     connInfo.url = connection.url;
 
+    // properties 속성이 존재 할경우
+    if( !isNullOrUndefined(connection.properties) ){
+      connInfo.properties = connection.properties;
+    }
+
     params.connection = connInfo;
     params.database = connection.database;
     params.type = 'TABLE';
@@ -228,7 +240,23 @@ export class WorkbenchService extends AbstractService {
   }
 
   public importFile(workbenchId: string, params: any) {
-    return this.post(this.API_URL + `workbenchs/${workbenchId}/import`, params);
+    return this.post(this.API_URL + `workbenchs/${workbenchId}/import/files`, params);
+  }
+
+  public getPreviewImportFile(workbenchId: string, fileKey: string, params: any): Promise<any> {
+    let url = this.API_URL + 'workbenchs/' + workbenchId + '/import/files/' + fileKey + "/preview";
+    if (params) {
+      // 주요 이스케이프 시퀀스에 대한 replace 처리 ( \n, \r, \t )
+      const replaceParams = {};
+      for (const key in params) {
+        if (params.hasOwnProperty(key)) {
+          replaceParams[key] = (params[key] + '').replace(/\\n/gi, '\n').replace(/\\r/gi, '\r').replace(/\\t/gi, '\t');
+        }
+      }
+      url += '?' + CommonUtil.objectToUrlString(replaceParams);
+    }
+
+    return this.get(url);
   }
 
   /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
